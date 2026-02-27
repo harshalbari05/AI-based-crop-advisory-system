@@ -41,14 +41,20 @@ The system suggests both organic and chemical solutions and includes a multiling
 ## Project Structure
 
 SmartCrop-AI/
-│
-├── model/              # Trained AI model
-├── dataset/            # Training dataset
-├── app/                # Backend application
-├── static/             # CSS, JS, images
-├── templates/          # Frontend files
-├── chatbot/            # Chatbot module
-└── README.md
+---
+model/              # Trained AI model 
+---
+dataset/            # Training dataset
+---
+app/                # Backend application
+---
+static/             # CSS, JS, images
+---
+templates/          # Frontend files
+---
+chatbot/            # Chatbot module
+---
+README.md
 
 ---
 
