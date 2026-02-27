@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Crop Advisory</title>
+    <!-- Added Website Favicon (Leaf Icon) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Added marked.js for parsing AI Markdown formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Styles for properly formatting AI chat responses */
+        .chat-markdown p { margin-bottom: 0.5rem; line-height: 1.4; }
+        .chat-markdown p:last-child { margin-bottom: 0; }
+        .chat-markdown ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; margin-top: 0.25rem; }
+        .chat-markdown ol { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; margin-top: 0.25rem; }
+        .chat-markdown li { margin-bottom: 0.25rem; }
+        .chat-markdown strong { font-weight: 600; color: #065f46; } /* emerald-800 */
+        .chat-markdown a { color: #059669; text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans selection:bg-emerald-200 min-h-screen text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-emerald-600 text-white p-4 sticky top-0 z-50 shadow-md">
+        <div class="flex justify-between items-center max-w-4xl mx-auto">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="leaf" class="w-6 h-6"></i>
+                <h1 class="text-xl font-bold tracking-wide">AgriSmart AI</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <select id="language-select" class="bg-emerald-700 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2 outline-none border border-emerald-500 cursor-pointer">
+                    <option value="English">English</option>
+                    <option value="Hindi">हिंदी (Hindi)</option>
+                    <option value="Marathi">मराठी (Marathi)</option>
+                    <option value="Telugu">తెలుగు (Telugu)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-4xl mx-auto p-4 pt-6 pb-24">
+        
+        <!-- ================= HOME VIEW ================= -->
+        <div id="home-view" class="view-section space-y-6">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold flex items-center">
+                        <i data-lucide="cloud-sun" class="mr-2"></i> Local Weather
+                    </h2>
+                    <span class="text-sm bg-white/20 px-3 py-1 rounded-full">Pune, MH</span>
+                </div>
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="text-5xl font-bold">32°C</div>
+                        <div class="text-blue-100 mt-1">Partly Cloudy • High Humidity</div>
+                    </div>
+                    <div class="flex flex-col space-y-2 text-sm">
+                        <div class="flex items-center"><i data-lucide="wind" class="w-4 h-4 mr-2"></i> 12 km/h</div>
+                        <div class="flex items-center"><i data-lucide="droplets" class="w-4 h-4 mr-2"></i> 68%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="switchTab('scan')" class="flex flex-col items-center justify-center p-4 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition">
+                        <i data-lucide="camera" class="w-8 h-8 text-emerald-600 mb-2"></i>
+                        <span class="text-sm font-medium text-emerald-800">Scan Crop</span>
+                    </button>
+                    <button onclick="switchTab('history')" class="flex flex-col items-center justify-center p-4 bg-amber-50 rounded-xl border border-amber-100 hover:bg-amber-100 transition">
+                        <i data-lucide="history" class="w-8 h-8 text-amber-600 mb-2"></i>
+                        <span class="text-sm font-medium text-amber-800">View History</span>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-gray-800 mb-3 px-1">Recent Diagnoses</h3>
+                <div id="dashboard-recent-list" class="space-y-3">
+                    <!-- Dynamic Dashboard History injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SCAN VIEW ================= -->
+        <div id="scan-view" class="view-section hidden flex flex-col items-center justify-center h-[70vh]">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Diagnose Your Crop</h2>
+                <p class="text-gray-500 max-w-xs mx-auto">Upload or take a picture of the affected leaf for instant AI analysis.</p>
+            </div>
+
+            <label id="drop-zone" class="relative w-full max-w-md aspect-square border-2 border-dashed border-emerald-300 rounded-3xl flex flex-col items-center justify-center bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer overflow-hidden group">
+                
+                <div id="scan-initial" class="flex flex-col items-center">
+                    <div class="w-20 h-20 bg-emerald-200 rounded-full flex items-center justify-center mb-4 text-emerald-600 shadow-inner">
+                        <i data-lucide="upload" class="w-10 h-10"></i>
+                    </div>
+                    <span class="font-medium text-emerald-800 text-lg">Tap to upload image</span>
+                    <span class="text-sm text-emerald-600/70 mt-1">or drag and drop</span>
+                </div>
+
+                <img id="scan-preview-img" src="" alt="Preview" class="hidden absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-30 transition">
+                <div id="scan-camera-overlay" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="bg-white/80 p-4 rounded-full backdrop-blur-sm shadow-lg">
+                        <i data-lucide="camera" class="w-8 h-8 text-emerald-600"></i>
+                    </div>
+                </div>
+
+                <div id="scan-loading" class="hidden absolute inset-0 bg-emerald-50 flex flex-col items-center justify-center text-emerald-600 z-10">
+                    <i data-lucide="loader" class="w-12 h-12 animate-spin mb-4"></i>
+                    <p class="font-medium animate-pulse text-center px-4" id="scan-loading-text">AI is analyzing your leaf...<br/><span class="text-xs opacity-75">(This may take a few seconds)</span></p>
+                </div>
+
+                <input type="file" id="image-upload" accept="image/*" class="hidden" />
+            </label>
+
+            <!-- Detailed Error Box -->
+            <div id="scan-error" class="hidden mt-6 p-4 bg-red-50 text-red-600 rounded-xl flex flex-col items-start w-full max-w-md border border-red-200 shadow-sm">
+                <div class="flex items-center font-semibold mb-1">
+                    <i data-lucide="shield-alert" class="w-5 h-5 mr-2"></i>
+                    Analysis Failed
+                </div>
+                <p id="scan-error-text" class="text-sm text-red-500 break-words w-full"></p>
+            </div>
+        </div>
+
+        <!-- ================= RESULTS VIEW ================= -->
+        <div id="results-view" class="view-section hidden space-y-6">
+            <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <div class="h-40 overflow-hidden relative">
+                    <img id="result-hero-img" src="" alt="Crop" class="w-full h-full object-cover filter blur-sm scale-110" />
+                    <div class="absolute inset-0 bg-black/40 flex items-end p-5">
+                        <div class="flex justify-between items-end w-full">
+                            <div class="text-white">
+                                <span id="result-confidence" class="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded-md backdrop-blur-md mb-2 inline-block"></span>
+                                <h2 id="result-crop-name" class="text-3xl font-bold"></h2>
+                            </div>
+                            <img id="result-thumb-img" src="" alt="Thumbnail" class="w-20 h-20 rounded-lg border-2 border-white object-cover shadow-lg" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-5 flex justify-between items-center bg-gray-50 border-b border-gray-100">
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Diagnosis</p>
+                        <p id="result-diagnosis" class="text-xl font-bold"></p>
+                    </div>
+                    <button id="tts-btn" onclick="toggleTTS()" class="flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+                        <i id="tts-icon" data-lucide="play" class="w-4 h-4 fill-current"></i>
+                        <span id="tts-text">Listen</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="unhealthy-details" class="space-y-4 hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="flex border-b border-gray-100">
+                        <button class="flex-1 py-3 font-medium text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/50">Treatment</button>
+                        <button class="flex-1 py-3 font-medium text-gray-500 hover:text-gray-700">Information</button>
+                    </div>
+                    <div class="p-5 space-y-5">
+                        <div>
+                            <h4 class="flex items-center font-bold text-green-700 mb-2">
+                                <i data-lucide="leaf" class="w-4 h-4 mr-2"></i> Organic Solutions
+                            </h4>
+                            <ul id="list-organic" class="space-y-2 text-sm text-gray-700"></ul>
+                        </div>
+                        <div>
+                            <h4 class="flex items-center font-bold text-blue-700 mb-2">
+                                <i data-lucide="activity" class="w-4 h-4 mr-2"></i> Chemical Interventions
+                            </h4>
+                            <ul id="list-chemical" class="space-y-2 text-sm text-gray-700"></ul>
+                        </div>
+                        <div class="pt-3 border-t border-gray-100">
+                            <h4 class="font-bold text-gray-800 mb-2">Prevention Measures</h4>
+                            <ul id="list-prevention" class="list-disc pl-5 space-y-1 text-sm text-gray-600"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Component -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+                <div class="p-4 bg-emerald-600 text-white rounded-t-2xl flex items-center">
+                    <i data-lucide="message-square" class="w-5 h-5 mr-2"></i>
+                    <h3 class="font-semibold">Ask Agri-Assistant</h3>
+                </div>
+                
+                <div id="chat-container" class="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50 hide-scrollbar">
+                    <!-- Chat messages injected here -->
+                </div>
+
+                <div class="p-3 bg-white border-t border-gray-100 flex items-center space-x-2 rounded-b-2xl">
+                    <input type="text" id="chat-input" placeholder="Ask about treatments..." class="flex-1 px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" onkeypress="handleChatKeyPress(event)" />
+                    <button id="send-chat-btn" onclick="handleSendMessage()" class="p-2 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 disabled:opacity-50 transition">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= HISTORY VIEW ================= -->
+        <div id="history-view" class="view-section hidden space-y-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Scan History</h2>
+            <div id="history-full-list" class="space-y-3">
+                <!-- Dynamic History injected here -->
+            </div>
+            <div id="history-empty" class="hidden flex flex-col items-center justify-center h-[50vh] text-gray-500">
+                <i data-lucide="history" class="w-12 h-12 mb-4 text-gray-300"></i>
+                <p>Your previous scan history will appear here.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="fixed bottom-0 w-full bg-white border-t border-gray-200 pb-safe z-50">
+        <div class="flex justify-around items-center p-3 max-w-4xl mx-auto">
+            <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center space-y-1 transition text-emerald-600" data-target="home">
+                <i data-lucide="activity" class="w-6 h-6"></i>
+                <span class="text-xs font-medium">Dashboard</span>
+            </button>
+            <div class="relative -top-6">
+                <button onclick="switchTab('scan')" class="bg-emerald-600 text-white p-4 rounded-full shadow-lg hover:bg-emerald-700 transition transform hover:scale-105">
+                    <i data-lucide="camera" class="w-8 h-8"></i>
+                </button>
+            </div>
+            <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center space-y-1 transition text-gray-400 hover:text-emerald-500" data-target="history">
+                <i data-lucide="history" class="w-6 h-6"></i>
+                <span class="text-xs font-medium">History</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Application Logic -->
+    <script>
+        // API Key (Filled securely by the environment at runtime, or manually if you download this file)
+        const apiKey = "AIzaSyDRnVPJSDD1bMgzI8uqO4zBuD6rqYas6XY"; 
+        
+        lucide.createIcons();
+
+        let currentImageBase64 = null;
+        let currentAnalysis = null;
+        let chatMessages = [];
+        let isChatting = false;
+        
+        let audioObj = null;
+        let isPlayingAudio = false;
+        let ttsSummaryText = "";
+        
+        // Chat Audio State
+        let activeChatAudio = null;
+        let activeChatAudioIndex = -1;
+
+        // --- History & Local Storage Management ---
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('agriSmartHistory') || '[]');
+            const dashboardList = document.getElementById('dashboard-recent-list');
+            const historyList = document.getElementById('history-full-list');
+            const historyEmpty = document.getElementById('history-empty');
+
+            let html = '';
+            if (history.length === 0) {
+                html = `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center text-sm text-gray-500">No recent scans.</div>`;
+                historyEmpty.classList.remove('hidden');
+                historyList.classList.add('hidden');
+            } else {
+                historyEmpty.classList.add('hidden');
+                historyList.classList.remove('hidden');
+                history.forEach(item => {
+                    const isHealthy = item.status.toLowerCase() === 'healthy';
+                    const badgeClass = isHealthy ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                    const displayStatus = isHealthy ? 'Healthy' : item.disease;
+                    
+                    html += `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <i data-lucide="leaf" class="w-6 h-6 text-emerald-500"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">${item.crop}</h4>
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${badgeClass}">${displayStatus}</span>
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-400">${item.date}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            // Update both views
+            historyList.innerHTML = html;
+            // Dashboard only shows top 2
+            dashboardList.innerHTML = history.length === 0 ? html : html.split('</div>\n                        <div').slice(0, 2).join('</div>\n                        <div') + (history.length > 2 ? '</div>' : '');
+            
+            lucide.createIcons();
+        }
+
+        function saveToHistory(analysis) {
+            const history = JSON.parse(localStorage.getItem('agriSmartHistory') || '[]');
+            history.unshift({
+                crop: analysis.cropName,
+                disease: analysis.diseaseName || 'None',
+                status: analysis.healthStatus,
+                date: new Date().toLocaleDateString()
+            });
+            // Keep only last 15 to save space
+            if(history.length > 15) history.pop();
+            localStorage.setItem('agriSmartHistory', JSON.stringify(history));
+            loadHistory();
+        }
+
+        // Initialize history on load
+        document.addEventListener('DOMContentLoaded', loadHistory);
+
+        // --- Fetch with Exponential Backoff & Detailed Errors ---
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    const data = await response.json();
+                    
+                    if (!response.ok || data.error) {
+                        const errMsg = data.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+                        // If it's a hard error like 400 Bad Request or 403 Forbidden, don't retry, fail immediately
+                        if (response.status === 400 || response.status === 403) {
+                            throw new Error(errMsg); 
+                        }
+                        throw new Error(errMsg);
+                    }
+                    return data;
+                } catch (error) {
+                    console.warn(`Attempt ${i + 1} failed: ${error.message}`);
+                    if (i === maxRetries - 1 || error.message.includes("API key not valid")) {
+                        throw error; // Throw final error to the UI
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        // --- Navigation ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${tabId}-view`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.target === tabId) {
+                    btn.classList.add('text-emerald-600');
+                    btn.classList.remove('text-gray-400');
+                } else {
+                    btn.classList.remove('text-emerald-600');
+                    btn.classList.add('text-gray-400');
+                }
+            });
+
+            // Stop any playing audio if leaving results screen
+            if(tabId !== 'results') {
+                stopAllAudio();
+            }
+        }
+
+        // --- Image Compression Utility ---
+        function compressImage(file, maxWidth = 800) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round((height *= maxWidth / width));
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Convert to highly optimized JPEG
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        resolve({
+                            base64Data: dataUrl.split(',')[1],
+                            mimeType: 'image/jpeg'
+                        });
+                    };
+                    img.onerror = () => reject(new Error("Failed to read image data"));
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // --- File Upload Handling ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('image-upload');
+        const scanInitial = document.getElementById('scan-initial');
+        const scanPreviewImg = document.getElementById('scan-preview-img');
+        const scanCameraOverlay = document.getElementById('scan-camera-overlay');
+        const scanLoading = document.getElementById('scan-loading');
+        const scanError = document.getElementById('scan-error');
+        const scanErrorText = document.getElementById('scan-error-text');
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('bg-emerald-100'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('bg-emerald-100'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-emerald-100');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showScanError("Please upload a valid image file.");
+                return;
+            }
+
+            const previewUrl = URL.createObjectURL(file);
+            scanPreviewImg.src = previewUrl;
+            
+            scanInitial.classList.add('hidden');
+            scanPreviewImg.classList.remove('hidden');
+            scanCameraOverlay.classList.remove('hidden');
+            scanError.classList.add('hidden');
+
+            try {
+                // Resize and compress the image before sending to prevent Payload Too Large errors
+                const { base64Data, mimeType } = await compressImage(file);
+                currentImageBase64 = previewUrl; // Keep original URL for UI display
+                analyzeImage(base64Data, mimeType);
+            } catch (err) {
+                showScanError("Failed to compress image locally: " + err.message);
+            }
+        }
+
+        function showScanError(msg) {
+            scanLoading.classList.add('hidden');
+            scanCameraOverlay.classList.remove('hidden');
+            scanErrorText.innerText = msg;
+            scanError.classList.remove('hidden');
+        }
+
+        // --- API Integration: Vision Analysis ---
+        async function analyzeImage(base64Data, mimeType) {
+            scanCameraOverlay.classList.add('hidden');
+            scanLoading.classList.remove('hidden');
+            scanError.classList.add('hidden');
+            
+            const selectedLanguage = document.getElementById('language-select').value;
+            
+            const prompt = `
+                You are an expert agronomist. Analyze this image of a crop leaf. 
+                Provide a diagnosis including the crop name, disease name (if any), health status, and a confidence score.
+                Also list symptoms, causes, prevention methods, organic treatments, and chemical treatments.
+                IMPORTANT: Translate all text values in your JSON response to ${selectedLanguage}. The JSON keys must remain in English, but the content must be in ${selectedLanguage}.
+            `;
+
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    cropName: { type: "STRING" },
+                    diseaseName: { type: "STRING" },
+                    healthStatus: { type: "STRING", description: "Healthy, Mildly Infected, Severely Infected" },
+                    confidenceScore: { type: "INTEGER", description: "0-100" },
+                    symptoms: { type: "ARRAY", items: { type: "STRING" } },
+                    causes: { type: "ARRAY", items: { type: "STRING" } },
+                    prevention: { type: "ARRAY", items: { type: "STRING" } },
+                    treatmentOrganic: { type: "ARRAY", items: { type: "STRING" } },
+                    treatmentChemical: { type: "ARRAY", items: { type: "STRING" } }
+                }
+            };
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }],
+                generationConfig: { responseMimeType: "application/json", responseSchema: schema }
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                
+                const data = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                // Parse the response specifically looking for the JSON structure
+                const resultText = data.candidates[0].content.parts[0].text;
+                currentAnalysis = JSON.parse(resultText);
+                
+                populateResults();
+                saveToHistory(currentAnalysis); // Save to local storage
+                
+                chatMessages = [{
+                    role: 'system',
+                    content: `I am your Agri-Assistant. I analyzed the ${currentAnalysis.cropName} leaf and detected ${currentAnalysis.healthStatus.toLowerCase().includes('health') ? 'no diseases' : currentAnalysis.diseaseName}. Do you have any questions? Please respond in ${selectedLanguage}.`
+                }];
+                
+                // Automatically stop old audio if restarting analysis
+                stopAllAudio();
+                
+                renderChat();
+                switchTab('results');
+                
+            } catch (err) {
+                console.error("Analysis Detailed Error:", err);
+                // Print the exact error so we know what to fix
+                showScanError(err.message || "Failed to connect to the Gemini API.");
+            } finally {
+                scanLoading.classList.add('hidden');
+                scanCameraOverlay.classList.remove('hidden');
+            }
+        }
+
+        function populateResults() {
+            const { cropName, diseaseName, healthStatus, confidenceScore, prevention, treatmentOrganic, treatmentChemical } = currentAnalysis;
+            const isHealthy = healthStatus.toLowerCase() === 'healthy';
+
+            document.getElementById('result-hero-img').src = currentImageBase64;
+            document.getElementById('result-thumb-img').src = currentImageBase64;
+            document.getElementById('result-crop-name').innerText = cropName || "Unknown Crop";
+            document.getElementById('result-confidence').innerText = `${confidenceScore || 0}% Confidence`;
+            
+            const diagEl = document.getElementById('result-diagnosis');
+            diagEl.innerText = isHealthy ? 'Healthy Plant' : (diseaseName || "Unknown Issue");
+            diagEl.className = `text-xl font-bold ${isHealthy ? 'text-green-600' : 'text-red-600'}`;
+
+            ttsSummaryText = `Analysis complete for ${cropName}. Status is ${healthStatus}. ${!isHealthy ? `Detected disease is ${diseaseName}.` : 'The plant looks healthy.'} ${treatmentOrganic?.length > 0 ? `I recommend: ${treatmentOrganic[0]}.` : ''}`;
+
+            const detailsSection = document.getElementById('unhealthy-details');
+            if (isHealthy) {
+                detailsSection.classList.add('hidden');
+            } else {
+                detailsSection.classList.remove('hidden');
+                
+                const buildList = (containerId, items, iconHtml, emptyMsg) => {
+                    const ul = document.getElementById(containerId);
+                    ul.innerHTML = '';
+                    if (items && items.length > 0) {
+                        items.forEach(item => {
+                            ul.innerHTML += `<li class="flex items-start">${iconHtml}<span>${item}</span></li>`;
+                        });
+                    } else {
+                        ul.innerHTML = `<li class="text-gray-500 text-sm">${emptyMsg}</li>`;
+                    }
+                };
+
+                buildList('list-organic', treatmentOrganic, '<i data-lucide="check-circle" class="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0"></i>', 'No organic treatments listed.');
+                buildList('list-chemical', treatmentChemical, '<i data-lucide="shield-alert" class="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0"></i>', 'No chemical treatments listed.');
+                
+                const prevUl = document.getElementById('list-prevention');
+                prevUl.innerHTML = '';
+                if(prevention) prevention.forEach(p => prevUl.innerHTML += `<li>${p}</li>`);
+                
+                lucide.createIcons();
+            }
+        }
+
+        // --- API Integration: Chat ---
+        function handleChatKeyPress(e) {
+            if(e.key === 'Enter') handleSendMessage();
+        }
+
+        async function handleSendMessage() {
+            const inputEl = document.getElementById('chat-input');
+            const val = inputEl.value.trim();
+            if(!val || isChatting) return;
+
+            chatMessages.push({ role: 'user', content: val });
+            inputEl.value = '';
+            isChatting = true;
+            renderChat();
+
+            const selectedLanguage = document.getElementById('language-select').value;
+            const systemContext = `You are an AI agricultural assistant. The user previously uploaded an image of a ${currentAnalysis.cropName} leaf diagnosed with ${currentAnalysis.diseaseName}. User asks: ${val}. Respond thoroughly in ${selectedLanguage}. Use plain formatting easily readable by Text-to-Speech engines.`;
+
+            const payload = { contents: [{ role: "user", parts: [{ text: systemContext }] }] };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                const data = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const botReply = data.candidates[0].content.parts[0].text;
+                chatMessages.push({ role: 'assistant', content: botReply });
+            } catch (err) {
+                chatMessages.push({ role: 'assistant', content: "Error: " + err.message });
+            } finally {
+                isChatting = false;
+                renderChat();
+            }
+        }
+
+        function renderChat() {
+            const container = document.getElementById('chat-container');
+            let html = '';
+            
+            chatMessages.forEach((msg, index) => {
+                if (msg.role === 'system') return; // Hide system context
+                const isUser = msg.role === 'user';
+                
+                // Parse AI response via Marked.js to format bold, newlines, and lists. Escape user text.
+                const formattedContent = isUser 
+                    ? msg.content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")
+                    : marked.parse(msg.content);
+                
+                const bubbleClass = isUser 
+                    ? 'bg-emerald-600 text-white rounded-br-none whitespace-pre-wrap' 
+                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm chat-markdown';
+
+                // Audio Button for AI Messages
+                let audioBtnHtml = '';
+                if (!isUser) {
+                    const isPlaying = activeChatAudioIndex === index;
+                    const iconName = isPlaying ? 'square' : 'volume-2';
+                    const btnColor = isPlaying ? 'bg-amber-100 text-amber-700' : 'bg-gray-50 text-emerald-600 hover:bg-emerald-50';
+                    
+                    audioBtnHtml = `
+                        <div class="mt-3 pt-2 border-t border-gray-100 flex justify-end">
+                            <button onclick="playChatAudio(${index})" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition ${btnColor} border border-transparent ${isPlaying ? 'border-amber-200' : 'border-gray-200'}">
+                                <i data-lucide="${iconName}" class="w-3.5 h-3.5 fill-current"></i>
+                                <span>${isPlaying ? 'Stop Listening' : 'Listen to Advice'}</span>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="flex ${isUser ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-[85%] p-3 rounded-2xl text-sm ${bubbleClass}">
+                            ${formattedContent}
+                            ${audioBtnHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (isChatting) {
+                html += `
+                    <div class="flex justify-start">
+                        <div class="bg-white border border-gray-200 p-3 rounded-2xl rounded-bl-none flex space-x-1">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
+            document.getElementById('send-chat-btn').disabled = isChatting;
+            
+            // Re-render icons inside new html
+            lucide.createIcons();
+        }
+
+        // --- API Integration: TTS Audio ---
+        const pcmToWav = (pcmData, sampleRate) => {
+            const numChannels = 1;
+            const byteRate = sampleRate * numChannels * 2;
+            const blockAlign = numChannels * 2;
+            const buffer = new ArrayBuffer(44 + pcmData.length);
+            const view = new DataView(buffer);
+
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+            };
+
+            writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + pcmData.length, true);
+            writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+            writeString(view, 36, 'data'); view.setUint32(40, pcmData.length, true);
+
+            const pcmBytes = new Uint8Array(pcmData);
+            const wavBytes = new Uint8Array(buffer);
+            wavBytes.set(pcmBytes, 44);
+            return buffer;
+        };
+
+        function stopAllAudio() {
+            if (audioObj) { audioObj.pause(); audioObj = null; }
+            isPlayingAudio = false; 
+            updateTtsUI();
+            
+            if (activeChatAudio) { activeChatAudio.pause(); activeChatAudio = null; }
+            activeChatAudioIndex = -1;
+            renderChat(); // Updates the icons inside the chat
+        }
+
+        async function toggleTTS() {
+            if (isPlayingAudio) {
+                stopAllAudio();
+                return;
+            }
+
+            stopAllAudio(); // Clear anything else playing before starting
+            isPlayingAudio = true;
+            document.getElementById('tts-text').innerText = "Loading...";
+            updateTtsUI();
+            
+            const payload = {
+                contents: [{ parts: [{ text: ttsSummaryText }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const data = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                if (audioPart) {
+                    const binaryString = atob(audioPart.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                    
+                    const wavBuffer = pcmToWav(bytes.buffer, 24000); 
+                    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                    
+                    audioObj = new Audio(URL.createObjectURL(blob));
+                    audioObj.onended = () => { isPlayingAudio = false; updateTtsUI(); };
+                    audioObj.play();
+                }
+            } catch (err) {
+                console.error("TTS Error:", err);
+                isPlayingAudio = false; updateTtsUI();
+            }
+        }
+
+        async function playChatAudio(index) {
+            const msg = chatMessages[index];
+            if (!msg) return;
+
+            // Stop if already playing this specific message
+            if (activeChatAudioIndex === index) {
+                stopAllAudio();
+                return;
+            }
+
+            // Stop any currently playing audio globally
+            stopAllAudio();
+
+            activeChatAudioIndex = index;
+            renderChat(); // Re-render to show loading/stop state on the button
+
+            // Clean the text to remove markdown characters so the AI reads it naturally
+            const cleanText = msg.content.replace(/[*#_]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
+
+            const payload = {
+                contents: [{ parts: [{ text: cleanText }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const data = await fetchWithRetry(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                if (audioPart && activeChatAudioIndex === index) { // Ensure user hasn't clicked another play button while loading
+                    const binaryString = atob(audioPart.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                    
+                    const wavBuffer = pcmToWav(bytes.buffer, 24000); 
+                    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                    
+                    activeChatAudio = new Audio(URL.createObjectURL(blob));
+                    activeChatAudio.onended = () => { activeChatAudioIndex = -1; renderChat(); };
+                    activeChatAudio.play();
+                }
+            } catch (err) {
+                console.error("Chat TTS Error:", err);
+                activeChatAudioIndex = -1;
+                renderChat();
+            }
+        }
+
+        function updateTtsUI() {
+            const btn = document.getElementById('tts-btn');
+            const icon = document.getElementById('tts-icon');
+            const textEl = document.getElementById('tts-text');
+
+            if(isPlayingAudio) {
+                btn.className = "flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition bg-amber-100 text-amber-700";
+                icon.setAttribute('data-lucide', 'square');
+                textEl.innerText = "Stop Audio";
+            } else {
+                btn.className = "flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition bg-emerald-100 text-emerald-700 hover:bg-emerald-200";
+                icon.setAttribute('data-lucide', 'play');
+                textEl.innerText = "Listen";
+            }
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
