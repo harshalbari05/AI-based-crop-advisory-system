@@ -5,6 +5,9 @@ SmartCrop AI is an intelligent agricultural advisory platform that detects crop 
 The system suggests both organic and chemical solutions and includes a multilingual chatbot designed to support rural language communication, making agricultural guidance more accessible to farmers.
 
 ---
+## Website Link
+
+https://ai-based-crop-advisory-system-4268.vercel.app/
 
 ## Features
 
