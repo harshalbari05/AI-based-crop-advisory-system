@@ -692,19 +692,18 @@
             let html = '';
             
             chatMessages.forEach((msg, index) => {
-                if (msg.role === 'system') return; // Hide system context
+                if (msg.role === 'system') return; 
                 const isUser = msg.role === 'user';
                 
-                // Parse AI response via Marked.js to format bold, newlines, and lists. Escape user text.
                 const formattedContent = isUser 
                     ? msg.content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")
                     : marked.parse(msg.content);
                 
+                // ADDED: w-fit and break-words to strictly wrap the text
                 const bubbleClass = isUser 
-                    ? 'bg-emerald-600 text-white rounded-br-none whitespace-pre-wrap' 
-                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm chat-markdown';
+                    ? 'bg-emerald-600 text-white rounded-br-none whitespace-pre-wrap w-fit break-words' 
+                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm chat-markdown w-fit break-words';
 
-                // Audio Button for AI Messages
                 let audioBtnHtml = '';
                 if (!isUser) {
                     const isPlaying = activeChatAudioIndex === index;
@@ -721,9 +720,10 @@
                     `;
                 }
 
+                // ADDED: px-4 py-2.5 for a sleeker shape, w-full for proper alignment
                 html += `
-                    <div class="flex ${isUser ? 'justify-end' : 'justify-start'}">
-                        <div class="max-w-[85%] p-3 rounded-2xl text-sm ${bubbleClass}">
+                    <div class="flex ${isUser ? 'justify-end' : 'justify-start'} w-full mb-2">
+                        <div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm ${bubbleClass}">
                             ${formattedContent}
                             ${audioBtnHtml}
                         </div>
@@ -732,9 +732,10 @@
             });
 
             if (isChatting) {
+                // ADDED: w-fit and px-4 py-3 to the loading animation bubble too
                 html += `
-                    <div class="flex justify-start">
-                        <div class="bg-white border border-gray-200 p-3 rounded-2xl rounded-bl-none flex space-x-1">
+                    <div class="flex justify-start w-full mb-2">
+                        <div class="bg-white border border-gray-200 px-4 py-3 w-fit rounded-2xl rounded-bl-none flex space-x-1">
                             <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                             <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                             <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
@@ -746,8 +747,6 @@
             container.innerHTML = html;
             container.scrollTop = container.scrollHeight;
             document.getElementById('send-chat-btn').disabled = isChatting;
-            
-            // Re-render icons inside new html
             lucide.createIcons();
         }
 
