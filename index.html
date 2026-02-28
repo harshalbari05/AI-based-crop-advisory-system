@@ -245,8 +245,8 @@
     <!-- Application Logic -->
     <script>
         // API Key (Filled securely by the environment at runtime, or manually if you download this file)
-        const apiKey = "AIzaSyDRnVPJSDD1bMgzI8uqO4zBuD6rqYas6XY"; 
-        
+        const url = `/api/analyze`;
+
         lucide.createIcons();
 
         let currentImageBase64 = null;
@@ -597,7 +597,7 @@
             const payload = { contents: [{ role: "user", parts: [{ text: systemContext }] }] };
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                const url = `/api/analyze`;
                 const data = await fetchWithRetry(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -734,7 +734,7 @@
             };
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const url = `/api/tts`;
                 const data = await fetchWithRetry(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -789,7 +789,7 @@
             };
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const url = `/api/tts`;
                 const data = await fetchWithRetry(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
