@@ -51,21 +51,27 @@
         
         <!-- ================= HOME VIEW ================= -->
         <div id="home-view" class="view-section space-y-6">
-            <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-lg">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-semibold flex items-center">
-                        <i data-lucide="cloud-sun" class="mr-2"></i> Local Weather
-                    </h2>
-                    <span class="text-sm bg-white/20 px-3 py-1 rounded-full">Pune, MH</span>
+            <!-- Live Weather Widget -->
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-20">
+                    <i id="weather-bg-icon" data-lucide="sun" class="w-32 h-32"></i>
                 </div>
-                <div class="flex justify-between items-end">
-                    <div>
-                        <div class="text-5xl font-bold">32°C</div>
-                        <div class="text-blue-100 mt-1">Partly Cloudy • High Humidity</div>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold flex items-center">
+                            <i id="weather-icon" data-lucide="cloud-sun" class="mr-2"></i> Local Weather
+                        </h2>
+                        <span id="weather-city" class="text-sm bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">Locating...</span>
                     </div>
-                    <div class="flex flex-col space-y-2 text-sm">
-                        <div class="flex items-center"><i data-lucide="wind" class="w-4 h-4 mr-2"></i> 12 km/h</div>
-                        <div class="flex items-center"><i data-lucide="droplets" class="w-4 h-4 mr-2"></i> 68%</div>
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <div id="weather-temp" class="text-5xl font-bold">--°C</div>
+                            <div id="weather-desc" class="text-blue-100 mt-1 font-medium capitalize">Fetching data...</div>
+                        </div>
+                        <div class="flex flex-col space-y-2 text-sm bg-black/10 p-3 rounded-xl backdrop-blur-sm">
+                            <div class="flex items-center"><i data-lucide="wind" class="w-4 h-4 mr-2"></i> <span id="weather-wind">--</span> km/h</div>
+                            <div class="flex items-center"><i data-lucide="droplets" class="w-4 h-4 mr-2"></i> <span id="weather-humidity">--</span>%</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -261,6 +267,70 @@
         // Chat Audio State
         let activeChatAudio = null;
         let activeChatAudioIndex = -1;
+        // --- Live Weather System ---
+        async function fetchWeather(lat, lon, cityName = null) {
+            try {
+                // 1. Get city name if not provided (Reverse Geocoding)
+                if (!cityName) {
+                    try {
+                        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                        const geoData = await geoRes.json();
+                        cityName = geoData.address.city || geoData.address.town || geoData.address.county || "Local Area";
+                    } catch(e) {
+                        cityName = "Local Area";
+                    }
+                }
+
+                // 2. Fetch live weather (Open-Meteo API - Free, No Key needed!)
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,is_day`);
+                const weatherData = await weatherRes.json();
+                const current = weatherData.current;
+
+                // 3. Match code to description and icon
+                const weatherMap = {
+                    0: { desc: 'Clear sky', icon: current.is_day ? 'sun' : 'moon' },
+                    1: { desc: 'Mainly clear', icon: current.is_day ? 'sun' : 'moon' },
+                    2: { desc: 'Partly cloudy', icon: 'cloud-sun' },
+                    3: { desc: 'Overcast', icon: 'cloud' },
+                    45: { desc: 'Foggy', icon: 'cloud-fog' },
+                    48: { desc: 'Rime fog', icon: 'cloud-fog' },
+                    51: { desc: 'Light Drizzle', icon: 'cloud-drizzle' },
+                    61: { desc: 'Rain', icon: 'cloud-rain' },
+                    71: { desc: 'Snow', icon: 'snowflake' },
+                    95: { desc: 'Thunderstorm', icon: 'cloud-lightning' },
+                };
+                const weatherInfo = weatherMap[current.weather_code] || { desc: 'Variable', icon: 'cloud' };
+
+                // 4. Inject data into HTML
+                document.getElementById('weather-city').innerText = cityName;
+                document.getElementById('weather-temp').innerText = `${Math.round(current.temperature_2m)}°C`;
+                document.getElementById('weather-desc').innerText = weatherInfo.desc;
+                document.getElementById('weather-wind').innerText = Math.round(current.wind_speed_10m);
+                document.getElementById('weather-humidity').innerText = current.relative_humidity_2m;
+                
+                document.getElementById('weather-icon').setAttribute('data-lucide', weatherInfo.icon);
+                document.getElementById('weather-bg-icon').setAttribute('data-lucide', weatherInfo.icon);
+                lucide.createIcons(); // redraw new icons
+
+            } catch (error) {
+                console.error("Weather error:", error);
+                document.getElementById('weather-city').innerText = "Offline";
+                document.getElementById('weather-desc').innerText = "Check connection";
+            }
+        }
+
+        function initWeather() {
+            // Ask browser for user's GPS location
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => { fetchWeather(position.coords.latitude, position.coords.longitude); },
+                    (error) => { fetchWeather(18.5204, 73.8567, "Pune, MH"); }, // Fallback to Pune if blocked
+                    { timeout: 5000 }
+                );
+            } else {
+                fetchWeather(18.5204, 73.8567, "Pune, MH"); // Fallback if GPS not supported
+            }
+        }
 
         // --- History & Local Storage Management ---
         function loadHistory() {
@@ -322,7 +392,10 @@
         }
 
         // Initialize history on load
-        document.addEventListener('DOMContentLoaded', loadHistory);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+            initWeather(); // <-- ADD THIS LINE
+        });
 
         // --- Fetch with Exponential Backoff & Detailed Errors ---
         async function fetchWithRetry(url, options, maxRetries = 5) {
