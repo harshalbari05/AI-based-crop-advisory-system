@@ -815,50 +815,45 @@
             renderChat(); // Updates the icons inside the chat
         }
 
-        async function toggleTTS() {
-            if (isPlayingAudio) {
-                stopAllAudio();
-                return;
-            }
-
-            stopAllAudio(); // Clear anything else playing before starting
-            isPlayingAudio = true;
-            document.getElementById('tts-text').innerText = "Loading...";
+       async function toggleTTS() {
+            if (isPlayingAudio) { stopAllAudio(); return; }
+            stopAllAudio(); 
+            isPlayingAudio = true; 
+            document.getElementById('tts-text').innerText = "Loading..."; 
             updateTtsUI();
-            
-            const payload = {
-                contents: [{ parts: [{ text: ttsSummaryText }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
-                },
-                model: "gemini-2.5-flash-preview-tts"
-            };
 
             try {
-                const url = `/api/tts`;
-                const data = await fetchWithRetry(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                const data = await fetchWithRetry('/api/tts', {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ contents: [{ parts: [{ text: ttsSummaryText }] }] })
                 });
                 
                 const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                
                 if (audioPart) {
                     const binaryString = atob(audioPart.data);
                     const bytes = new Uint8Array(binaryString.length);
                     for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
                     
-                    const wavBuffer = pcmToWav(bytes.buffer, 24000); 
-                    const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-                    
+                    const blob = new Blob([pcmToWav(bytes.buffer, 24000)], { type: 'audio/wav' });
                     audioObj = new Audio(URL.createObjectURL(blob));
-                    audioObj.onended = () => { isPlayingAudio = false; updateTtsUI(); };
-                    audioObj.play();
+                    
+                    audioObj.onended = () => { isPlayingAudio = false; updateTtsUI(); }; 
+                    
+                    // THE FIX: Catch browser autoplay blocks!
+                    audioObj.play().catch(err => {
+                        console.error("Audio blocked by browser:", err);
+                        alert("Your browser blocked the audio. Ensure your phone is not on silent mode.");
+                        stopAllAudio();
+                    });
+                } else {
+                    console.error("No audio data received from API.");
+                    stopAllAudio();
                 }
-            } catch (err) {
-                console.error("TTS Error:", err);
-                isPlayingAudio = false; updateTtsUI();
+            } catch (err) { 
+                console.error("TTS fetch failed:", err);
+                stopAllAudio(); 
             }
         }
 
