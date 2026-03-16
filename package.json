@@ -6,6 +6,6 @@
     "build": "echo 'No build step required for HTML'"
   },
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   }
 }
