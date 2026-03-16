@@ -223,7 +223,7 @@
             <div id="history-full-list" class="space-y-3">
                 <!-- Dynamic History injected here -->
             </div>
-            <div id="history-empty" class="hidden flex flex-col items-center justify-center h-[50vh] text-gray-500">
+            <div onclick="openHistory()" id="history-empty" class="hidden flex flex-col items-center justify-center h-[50vh] text-gray-500">
                 <i data-lucide="history" class="w-12 h-12 mb-4 text-gray-300"></i>
                 <p>Your previous scan history will appear here.</p>
             </div>
@@ -261,12 +261,28 @@
                     <i data-lucide="camera" class="w-8 h-8"></i>
                 </button>
             </div>
-            <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center space-y-1 transition text-gray-400 hover:text-emerald-500" data-target="history">
+            <button onclick="openHistory()" class="nav-btn flex flex-col items-center space-y-1 transition text-gray-400 hover:text-emerald-500" data-target="history">
                 <i data-lucide="history" class="w-6 h-6"></i>
                 <span class="text-xs font-medium">History</span>
             </button>
         </div>
     </nav>
+    <!-- History Modal -->
+    <div id="history-modal" class="fixed inset-0 bg-white z-[60] transform translate-y-full transition-transform duration-300 flex flex-col">
+    <!-- Header -->
+        <div class="px-5 py-4 flex items-center justify-between border-b border-gray-100 bg-white shadow-sm">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center">
+                <i data-lucide="history" class="w-5 h-5 mr-2 text-emerald-600"></i> Past Diagnoses
+            </h2>
+            <button onclick="closeHistory()" class="p-2 bg-gray-50 text-gray-600 rounded-full hover:bg-gray-100">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <!-- List Container -->
+        <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 pb-24">
+            <!-- History items will be injected here by JavaScript -->
+        </div>
+    </div>
 
     <!-- Application Logic -->
     <script src="script.js"></script>
