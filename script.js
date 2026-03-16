@@ -424,7 +424,8 @@ async function analyzeImage(base64Data, mimeType) {
         currentAnalysis = JSON.parse(resultText);
         
         populateResults();
-        saveToHistory(currentAnalysis); // Save to local storage
+        // This sends the image picture and the disease name to your new IndexedDB!
+        saveToHistory(currentImageBase64, currentAnalysis.diseaseName || 'Healthy Plant');
         
         chatMessages = [{
             role: 'system',
