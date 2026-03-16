@@ -110,65 +110,128 @@ function initWeather() {
         fetchWeatherByIP();
     }
 }
+// --- ADVANCED HISTORY FEATURE (INDEXEDDB) ---
 
-// --- History & Local Storage Management ---
-function loadHistory() {
-    const history = JSON.parse(localStorage.getItem('agriSmartHistory') || '[]');
-    const dashboardList = document.getElementById('dashboard-recent-list');
-    const historyList = document.getElementById('history-full-list');
-    const historyEmpty = document.getElementById('history-empty');
+let diagnosisHistory = [];
+let db; // The database connection
 
-    let html = '';
-    if (history.length === 0) {
-        html = `<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center text-sm text-gray-500">No recent scans.</div>`;
-        historyEmpty.classList.remove('hidden');
-        historyList.classList.add('hidden');
-    } else {
-        historyEmpty.classList.add('hidden');
-        historyList.classList.remove('hidden');
-        history.forEach(item => {
-            const isHealthy = item.status.toLowerCase() === 'healthy';
-            const badgeClass = isHealthy ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-            const displayStatus = isHealthy ? 'Healthy' : item.disease;
+// 1. Initialize the Database
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('AgriSmartDB', 1);
+        
+        request.onerror = (event) => {
+            console.error("Database error:", event.target.error);
+            reject("Error opening database");
+        };
+        
+        request.onsuccess = (event) => {
+            db = event.target.result;
+            resolve(db);
+        };
+        
+        // This runs the very first time the app is opened to create the "table"
+        request.onupgradeneeded = (event) => {
+            const database = event.target.result;
+            if (!database.objectStoreNames.contains('diagnoses')) {
+                database.createObjectStore('diagnoses', { keyPath: 'id' });
+            }
+        };
+    });
+}
+
+// 2. Load past history when app starts
+async function loadHistory() {
+    try {
+        if (!db) await initDB();
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(['diagnoses'], 'readonly');
+            const store = transaction.objectStore('diagnoses');
+            const request = store.getAll();
             
-            html += `
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <i data-lucide="leaf" class="w-6 h-6 text-emerald-500"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-800">${item.crop}</h4>
-                            <span class="text-xs px-2 py-0.5 rounded-full ${badgeClass}">${displayStatus}</span>
-                        </div>
-                    </div>
-                    <span class="text-xs text-gray-400">${item.date}</span>
-                </div>
-            `;
+            request.onsuccess = () => {
+                // Sort so the newest items are at the top
+                diagnosisHistory = request.result.sort((a, b) => b.id - a.id);
+                renderHistory();
+                resolve();
+            };
         });
+    } catch (error) {
+        console.error("Failed to load history:", error);
+    }
+}
+
+// 3. Save new diagnosis to the permanent database
+async function saveToHistory(imageSrc, diagnosisText) {
+    try {
+        if (!db) await initDB();
+        
+        const newItem = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            image: imageSrc,
+            text: diagnosisText
+        };
+        
+        const transaction = db.transaction(['diagnoses'], 'readwrite');
+        const store = transaction.objectStore('diagnoses');
+        store.add(newItem);
+        
+        // Update the screen instantly
+        diagnosisHistory.unshift(newItem);
+        renderHistory();
+        
+    } catch (error) {
+        console.error("Failed to save to history:", error);
+    }
+}
+
+// 4. UI Functions (Open, Close, Render)
+function openHistory() {
+    const modal = document.getElementById('history-modal');
+    modal.classList.remove('hidden');
+    setTimeout(() => modal.classList.remove('translate-y-full'), 10);
+}
+
+function closeHistory() {
+    const modal = document.getElementById('history-modal');
+    modal.classList.add('translate-y-full');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+
+function renderHistory() {
+    const container = document.getElementById('history-list');
+    
+    if (diagnosisHistory.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 mt-10">
+                <i data-lucide="leaf" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+                <p>No past diagnoses yet.</p>
+                <p class="text-xs mt-2 opacity-60">Scans will be saved securely on your device.</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
     }
 
-    // Update both views
-    historyList.innerHTML = html;
-    // Dashboard only shows top 2
-    dashboardList.innerHTML = history.length === 0 ? html : html.split('</div>\n                        <div').slice(0, 2).join('</div>\n                        <div') + (history.length > 2 ? '</div>' : '');
+    container.innerHTML = diagnosisHistory.map(item => `
+        <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex space-x-3 items-center">
+            <img src="${item.image}" class="w-16 h-16 rounded-xl object-cover border border-gray-100">
+            <div class="flex-1">
+                <p class="text-xs text-gray-400 mb-1">${item.date}</p>
+                <p class="text-sm font-medium text-gray-800 line-clamp-2">${item.text.substring(0, 75)}...</p>
+            </div>
+        </div>
+    `).join('');
     
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function saveToHistory(analysis) {
-    const history = JSON.parse(localStorage.getItem('agriSmartHistory') || '[]');
-    history.unshift({
-        crop: analysis.cropName,
-        disease: analysis.diseaseName || 'None',
-        status: analysis.healthStatus,
-        date: new Date().toLocaleDateString()
-    });
-    // Keep only last 15 to save space
-    if(history.length > 15) history.pop();
-    localStorage.setItem('agriSmartHistory', JSON.stringify(history));
-    loadHistory();
-}
+// 5. Start the database when the script loads
+window.addEventListener('DOMContentLoaded', () => {
+    initDB().then(() => loadHistory());
+});
+
 
 // Initialize history on load
 document.addEventListener('DOMContentLoaded', () => {
