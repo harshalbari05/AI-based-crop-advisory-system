@@ -815,7 +815,7 @@
             renderChat(); // Updates the icons inside the chat
         }
 
-       async function toggleTTS() {
+        async function toggleTTS() {
             if (isPlayingAudio) { stopAllAudio(); return; }
             stopAllAudio(); 
             isPlayingAudio = true; 
@@ -829,6 +829,13 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: ttsSummaryText }] }] })
                 });
                 
+                // Check if we got an error from our backend
+                if (data.error) {
+                    alert("Backend Error: " + data.error);
+                    stopAllAudio();
+                    return;
+                }
+
                 const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
                 
                 if (audioPart) {
@@ -841,18 +848,16 @@
                     
                     audioObj.onended = () => { isPlayingAudio = false; updateTtsUI(); }; 
                     
-                    // THE FIX: Catch browser autoplay blocks!
                     audioObj.play().catch(err => {
-                        console.error("Audio blocked by browser:", err);
-                        alert("Your browser blocked the audio. Ensure your phone is not on silent mode.");
+                        alert("Browser Audio Blocked: " + err.message);
                         stopAllAudio();
                     });
                 } else {
-                    console.error("No audio data received from API.");
+                    alert("Google AI did not return an audio file. It returned text instead.");
                     stopAllAudio();
                 }
             } catch (err) { 
-                console.error("TTS fetch failed:", err);
+                alert("Network/Fetch Error: " + err.message);
                 stopAllAudio(); 
             }
         }
