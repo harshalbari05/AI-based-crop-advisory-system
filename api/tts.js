@@ -3,8 +3,8 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     
-    // CHANGED: Using the standard, stable public model instead of the restricted preview model
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // CRITICAL: We MUST use the dedicated TTS model
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
     try {
         const response = await fetch(url, {
@@ -17,7 +17,7 @@ export default async function handler(req, res) {
                     speechConfig: {
                         voiceConfig: {
                             prebuiltVoiceConfig: {
-                                voiceName: "Aoede"
+                                voiceName: "Aoede" // The AI voice
                             }
                         }
                     }
@@ -27,9 +27,9 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         
-        // Catch Google API errors directly
-        if (data.error) {
-            return res.status(400).json({ error: data.error.message });
+        // Pass the exact Google error back so we can read it!
+        if (!response.ok) {
+            return res.status(400).json({ error: data.error?.message || "Google API Error" });
         }
 
         res.status(200).json(data);
