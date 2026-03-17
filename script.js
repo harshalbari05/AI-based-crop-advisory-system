@@ -29,7 +29,7 @@ const translations = {
         "install-sub": "Add to home screen for quick access", "install-btn": "Install"
     },
     "mr-IN": {
-        "app-title": "अॅग्रीस्मार्ट", "mode-farming": "शेती", "mode-gardening": "बागकाम", 
+        "app-title": "AgriSmart", "mode-farming": "शेती", "mode-gardening": "बागकाम", 
         "weather-title": "स्थानिक हवामान", "quick-actions": "त्वरित क्रिया", 
         "scan-plant": "पीक स्कॅन करा", "view-history": "इतिहास पहा", 
         "recent-diagnoses": "अलीकडील निदान", "diagnose-title": "तुमच्या पिकाचे निदान करा", 
@@ -48,7 +48,7 @@ const translations = {
         "install-sub": "त्वरित प्रवेशासाठी होम स्क्रीनवर जोडा", "install-btn": "इन्स्टॉल करा"
     },
     "hi-IN": {
-        "app-title": "एग्रीस्मार्ट", "mode-farming": "खेती", "mode-gardening": "बागवानी", 
+        "app-title": "AgriSmart", "mode-farming": "खेती", "mode-gardening": "बागवानी", 
         "weather-title": "स्थानीय मौसम", "quick-actions": "त्वरित कार्रवाइयां", 
         "scan-plant": "फसल स्कैन करें", "view-history": "इतिहास देखें", 
         "recent-diagnoses": "हाल के निदान", "diagnose-title": "अपनी फसल का निदान करें", 
@@ -67,7 +67,7 @@ const translations = {
         "install-sub": "त्वरित पहुंच के लिए होम स्क्रीन पर जोड़ें", "install-btn": "इंस्टॉल करें"
     },
     "ta-IN": {
-        "app-title": "அக்ரிஸ்மார்ட்", "mode-farming": "விவசாயம்", "mode-gardening": "தோட்டக்கலை", 
+        "app-title": "AgriSmart", "mode-farming": "விவசாயம்", "mode-gardening": "தோட்டக்கலை", 
         "weather-title": "உள்ளூர் வானிலை", "quick-actions": "விரைவு செயல்கள்", 
         "scan-plant": "பயிரை ஸ்கேன் செய்", "view-history": "வரலாற்றைக் காண்", 
         "recent-diagnoses": "சமீபத்திய நோயறிதல்கள்", "diagnose-title": "உங்கள் பயிரை கண்டறியவும்", 
