@@ -509,6 +509,19 @@ function populateResults() {
                 ul.innerHTML = `<li class="text-gray-500 text-sm">${emptyMsg}</li>`;
             }
         };
+        // Render the new Care Tips for Gardeners!
+        const careContainer = document.getElementById('care-tips-container');
+        const careUl = document.getElementById('list-care-tips');
+        
+        if (currentAnalysis.careTips && currentAnalysis.careTips.length > 0) {
+            careContainer.classList.remove('hidden');
+            careUl.innerHTML = '';
+            currentAnalysis.careTips.forEach(tip => {
+                careUl.innerHTML += `<li class="flex items-start"><i data-lucide="sun" class="w-4 h-4 text-amber-500 mr-2 mt-0.5 flex-shrink-0"></i><span>${tip}</span></li>`;
+            });
+        } else {
+            careContainer.classList.add('hidden');
+        }
 
         buildList('list-organic', treatmentOrganic, '<i data-lucide="check-circle" class="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0"></i>', 'No organic treatments listed.');
         buildList('list-chemical', treatmentChemical, '<i data-lucide="shield-alert" class="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0"></i>', 'No chemical treatments listed.');
