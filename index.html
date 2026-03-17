@@ -41,7 +41,7 @@
                     <i data-lucide="bot" class="w-5 h-5 text-emerald-600"></i>
                 </div>
                 <div>
-                    <h2 class="text-white font-bold text-base leading-tight">AgriSmart</h2>
+                    <h2 class="text-white font-bold text-base leading-tight" data-translate="app-title">AgriSmart</h2>
                 </div>
             </div>
         </div>
@@ -61,11 +61,11 @@
                 <div id="toggle-slider" class="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out transform translate-x-0"></div>
                 
                 <button onclick="setUserMode('farmer')" id="btn-farmer" class="flex-1 relative z-10 py-2 text-sm font-bold flex items-center justify-center text-emerald-700 transition-colors duration-300">
-                    <i data-lucide="tractor" class="w-4 h-4 mr-2"></i> Farming
+                    <i data-lucide="tractor" class="w-4 h-4 mr-2"></i> <span data-translate="mode-farming">Farming</span>
                 </button>
                 
                 <button onclick="setUserMode('gardener')" id="btn-gardener" class="flex-1 relative z-10 py-2 text-sm font-bold flex items-center justify-center text-gray-500 transition-colors duration-300">
-                    <i data-lucide="flower-2" class="w-4 h-4 mr-2"></i> Gardening
+                    <i data-lucide="flower-2" class="w-4 h-4 mr-2"></i> <span data-translate="mode-gardening">Gardening</span>
                 </button>
             </div>
         </div>
@@ -79,7 +79,7 @@
                 </div>
                 <div class="relative z-10">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold flex items-center">
+                        <h2 class="text-lg font-semibold flex items-center" data-translate="weather-title">
                             <i id="weather-icon" data-lucide="cloud-sun" class="mr-2"></i> Local Weather
                         </h2>
                         <span id="weather-city" class="text-sm bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">Locating...</span>
@@ -98,21 +98,21 @@
             </div>
 
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 class="font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                <h3 class="font-semibold text-gray-800 mb-4" data-translate="quick-action">Quick Actions</h3>
                 <div class="grid grid-cols-2 gap-4">
                     <button onclick="switchTab('scan')" class="flex flex-col items-center justify-center p-4 bg-emerald-50 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition">
                         <i data-lucide="camera" class="w-8 h-8 text-emerald-600 mb-2"></i>
-                        <span class="text-sm font-medium text-emerald-800">Scan Crop</span>
+                        <span class="text-sm font-medium text-emerald-800" data-translate="scan-plant">Scan Crop</span>
                     </button>
                     <button onclick="switchTab('history')" class="flex flex-col items-center justify-center p-4 bg-amber-50 rounded-xl border border-amber-100 hover:bg-amber-100 transition">
                         <i data-lucide="history" class="w-8 h-8 text-amber-600 mb-2"></i>
-                        <span class="text-sm font-medium text-amber-800">View History</span>
+                        <span class="text-sm font-medium text-amber-800" data-translate="view-history">View History</span>
                     </button>
                 </div>
             </div>
 
             <div>
-                <h3 class="font-semibold text-gray-800 mb-3 px-1">Recent Diagnoses</h3>
+                <h3 class="font-semibold text-gray-800 mb-3 px-1" data-translate="recent-diagnoses">Recent Diagnoses</h3>
                 <div id="dashboard-recent-list" class="space-y-3">
                     <!-- Dynamic Dashboard History injected here -->
                 </div>
@@ -122,8 +122,8 @@
         <!-- ================= SCAN VIEW ================= -->
         <div id="scan-view" class="view-section hidden flex flex-col items-center justify-center h-[70vh]">
             <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Diagnose Your Crop</h2>
-                <p class="text-gray-500 max-w-xs mx-auto">Upload or take a picture of the affected plant for instant AI analysis</p>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2" data-translate="diagnose-title">Diagnose Your Crop</h2>
+                <p class="text-gray-500 max-w-xs mx-auto" data-translate="diagnose-sub">Upload or take a picture of the affected plant for instant AI analysis</p>
             </div>
 
             <label id="drop-zone" class="relative w-full max-w-md aspect-square border-2 border-dashed border-emerald-300 rounded-3xl flex flex-col items-center justify-center bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer overflow-hidden group">
@@ -132,8 +132,8 @@
                     <div class="w-20 h-20 bg-emerald-200 rounded-full flex items-center justify-center mb-4 text-emerald-600 shadow-inner">
                         <i data-lucide="upload" class="w-10 h-10"></i>
                     </div>
-                    <span class="font-medium text-emerald-800 text-lg">Tap to upload image</span>
-                    <span class="text-sm text-emerald-600/70 mt-1">or drag and drop</span>
+                    <span class="font-medium text-emerald-800 text-lg" data-translate="tap-upload">Tap to upload image</span>
+                    <span class="text-sm text-emerald-600/70 mt-1" data-translate="drag-drop">or drag and drop</span>
                 </div>
 
                 <img id="scan-preview-img" src="" alt="Preview" class="hidden absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-30 transition">
@@ -145,7 +145,7 @@
 
                 <div id="scan-loading" class="hidden absolute inset-0 bg-emerald-50 flex flex-col items-center justify-center text-emerald-600 z-10">
                     <i data-lucide="loader" class="w-12 h-12 animate-spin mb-4"></i>
-                    <p class="font-medium animate-pulse text-center px-4" id="scan-loading-text">AI is analyzing the image...<br/><span class="text-xs opacity-75">(This may take a few seconds)</span></p>
+                    <p class="font-medium animate-pulse text-center px-4" id="scan-loading-text" >AI is analyzing the image...<br/><span class="text-xs opacity-75">(This may take a few seconds)</span></p>
                 </div>
 
                 <input type="file" id="image-upload" accept="image/*" capture="environment" class="hidden" />
@@ -179,12 +179,12 @@
                 
                 <div class="p-5 flex justify-between items-center bg-gray-50 border-b border-gray-100">
                     <div>
-                        <p class="text-sm text-gray-500 font-medium">Diagnosis</p>
+                        <p class="text-sm text-gray-500 font-medium" data-translate="diagnosis">Diagnosis</p>
                         <p id="result-diagnosis" class="text-xl font-bold"></p>
                     </div>
                     <button id="tts-btn" onclick="toggleTTS()" class="flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
                         <i id="tts-icon" data-lucide="play" class="w-4 h-4 fill-current"></i>
-                        <span id="tts-text">Listen</span>
+                        <span id="tts-text" data-translate="listen">Listen</span>
                     </button>
                     <button onclick="openFullScreenChat()" class="w-full mt-5 bg-emerald-50 border-2 border-emerald-500 text-emerald-800 py-3.5 px-4 rounded-2xl flex items-center justify-between shadow-sm active:bg-emerald-100 transition-all">
                         <div class="flex items-center space-x-4">
@@ -192,8 +192,8 @@
                                 <i data-lucide="mic" class="w-6 h-6"></i>
                             </div>
                             <div class="text-left">
-                                <p class="text-lg font-extrabold leading-tight mb-0.5">Have a question?</p>
-                                <p class="text-sm font-semibold text-emerald-600">Ask the AI Agri-Expert</p>
+                                <p class="text-lg font-extrabold leading-tight mb-0.5" data-translate="">Have a question?</p>
+                                <p class="text-sm font-semibold text-emerald-600" data-translate="ask-ai">Ask the AI Agri-Expert</p>
                             </div>
                         </div>
                         <i data-lucide="chevron-right" class="w-6 h-6 text-emerald-500"></i>
@@ -204,31 +204,31 @@
             <div id="unhealthy-details" class="space-y-4 hidden">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="flex border-b border-gray-100">
-                        <button class="flex-1 py-3 font-medium text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/50">Treatment</button>
-                        <button class="flex-1 py-3 font-medium text-gray-500 hover:text-gray-700">Information</button>
+                        <button class="flex-1 py-3 font-medium text-emerald-700 border-b-2 border-emerald-600 bg-emerald-50/50" data-translate="treatment-tab">Treatment</button>
+                        <button class="flex-1 py-3 font-medium text-gray-500 hover:text-gray-700" data-translate="info-tab">Information</button>
                     </div>
                     <div class="p-5 space-y-5">
                         <!-- NEW: Care Tips container for Gardeners -->
                         <div id="care-tips-container" class="hidden">
-                            <h4 class="flex items-center font-bold text-amber-600 mb-2">
+                            <h4 class="flex items-center font-bold text-amber-600 mb-2" data-translate="plant-care">
                                 <i data-lucide="sun" class="w-4 h-4 mr-2"></i> Plant Care & Tips
                             </h4>
                             <ul id="list-care-tips" class="space-y-2 text-sm text-gray-700"></ul>
                         </div>
                         <div>
-                            <h4 class="flex items-center font-bold text-green-700 mb-2">
+                            <h4 class="flex items-center font-bold text-green-700 mb-2" data-translate="organic-sol">
                                 <i data-lucide="leaf" class="w-4 h-4 mr-2"></i> Organic Solutions
                             </h4>
                             <ul id="list-organic" class="space-y-2 text-sm text-gray-700"></ul>
                         </div>
                         <div>
-                            <h4 class="flex items-center font-bold text-blue-700 mb-2">
+                            <h4 class="flex items-center font-bold text-blue-700 mb-2" data-translate="chemical-int">
                                 <i data-lucide="activity" class="w-4 h-4 mr-2"></i> Chemical Interventions
                             </h4>
                             <ul id="list-chemical" class="space-y-2 text-sm text-gray-700"></ul>
                         </div>
                         <div class="pt-3 border-t border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2">Prevention Measures</h4>
+                            <h4 class="font-bold text-gray-800 mb-2" data-translate="prevention">Prevention Measures</h4>
                             <ul id="list-prevention" class="list-disc pl-5 space-y-1 text-sm text-gray-600"></ul>
                         </div>
                     </div>
@@ -238,13 +238,13 @@
 
         <!-- ================= HISTORY VIEW ================= -->
         <div id="history-view" class="view-section hidden space-y-4">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Scan History</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4" data-translate="scan-history">Scan History</h2>
             <div id="history-full-list" class="space-y-3">
                 <!-- Dynamic History injected here -->
             </div>
             <div onclick="openHistory()" id="history-empty" class="hidden flex flex-col items-center justify-center h-[50vh] text-gray-500">
                 <i data-lucide="history" class="w-12 h-12 mb-4 text-gray-300"></i>
-                <p>Your previous scan history will appear here.</p>
+                <p data-translate="no-history-msg">Your previous scan history will appear here.</p>
             </div>
         </div>
         
@@ -258,13 +258,13 @@
                     <i data-lucide="smartphone" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h4 class="font-bold text-gray-800 text-sm">Install AgriSmart</h4>
-                    <p class="text-[11px] text-gray-500">Add to home screen for quick access</p>
+                    <h4 class="font-bold text-gray-800 text-sm" data-translate="install-title">Install AgriSmart</h4>
+                    <p class="text-[11px] text-gray-500" data-translate="install-sub">Add to home screen for quick access</p>
                 </div>
             </div>
             <div class="flex space-x-2">
                 <button onclick="dismissInstall()" class="p-2 text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-                <button onclick="installApp()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700">Install</button>
+                <button onclick="installApp()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700" data-translate="install-btn">Install</button>
             </div>
         </div>
     </div>
@@ -274,7 +274,7 @@
         <div class="flex justify-around items-center p-3 max-w-4xl mx-auto">
             <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center space-y-1 transition text-emerald-600" data-target="home">
                 <i data-lucide="activity" class="w-6 h-6"></i>
-                <span class="text-xs font-medium">Dashboard</span>
+                <span class="text-xs font-medium" data-translate="nav-dashboard">Dashboard</span>
             </button>
             <div class="relative -top-6">
                 <button onclick="switchTab('scan')" class="bg-emerald-600 text-white p-4 rounded-full shadow-lg hover:bg-emerald-700 transition transform hover:scale-105">
@@ -283,7 +283,7 @@
             </div>
             <button onclick="openHistory()" class="nav-btn flex flex-col items-center space-y-1 transition text-gray-400 hover:text-emerald-500" data-target="history">
                 <i data-lucide="history" class="w-6 h-6"></i>
-                <span class="text-xs font-medium">History</span>
+                <span class="text-xs font-medium" data-translate="nav-history" data-target="nav-history">History</span>
             </button>
         </div>
     </nav>
@@ -291,7 +291,7 @@
     <div id="history-modal" class="fixed inset-0 bg-white z-[60] transform translate-y-full transition-transform duration-300 flex flex-col">
     <!-- Header -->
         <div class="px-5 py-4 flex items-center justify-between border-b border-gray-100 bg-white shadow-sm">
-            <h2 class="text-lg font-bold text-gray-800 flex items-center">
+            <h2 class="text-lg font-bold text-gray-800 flex items-center" data-translate="past-diagnoses">
                 <i data-lucide="history" class="w-5 h-5 mr-2 text-emerald-600"></i> Past Diagnoses
             </h2>
             <button onclick="closeHistory()" class="p-2 bg-gray-50 text-gray-600 rounded-full hover:bg-gray-100">
@@ -313,21 +313,21 @@
                 <i data-lucide="bot" class="w-6 h-6 text-emerald-600"></i>
             </div>
             <div>
-                <h2 class="text-white font-bold text-lg leading-tight">Agri Expert</h2>
-                <p class="text-emerald-100 text-xs">Always active</p>
+                <h2 class="text-white font-bold text-lg leading-tight" data-translate="chat-title">Agri Expert</h2>
+                <p class="text-emerald-100 text-xs" data-translate="chat-active">Always active</p>
             </div>
         </div>
     </div>
     
     <div id="full-chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 bg-[#ece5dd]">
-        <div class="text-center text-xs text-gray-400 my-4 bg-gray-200/50 rounded-full w-max mx-auto px-3 py-1">Chat started</div>
+        <div class="text-center text-xs text-gray-400 my-4 bg-gray-200/50 rounded-full w-max mx-auto px-3 py-1" data-translate="chat-started">Chat started</div>
     </div>
 
     <div class="bg-white border-t border-gray-200 px-4 py-3 pb-safe">
         <div class="flex justify-center mb-3">
              <button id="mic-btn" onclick="toggleVoiceTyping()" class="bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-full shadow-sm border border-emerald-100 flex items-center space-x-2 transition-all">
                  <i data-lucide="mic" id="mic-icon" class="w-5 h-5"></i>
-                 <span id="mic-status" class="text-sm font-semibold">Tap to Speak</span>
+                 <span id="mic-status" class="text-sm font-semibold" data-translate="tap-speak">Tap to Speak</span>
              </button>
         </div>
         <div class="flex items-end space-x-2">

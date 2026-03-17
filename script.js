@@ -4,6 +4,112 @@ const url = `/api/analyze`;
 lucide.createIcons();
 
 let currentImageBase64 = null;
+
+// --- FULL UI TRANSLATION DICTIONARY ---
+let currentLang = 'en-IN'; 
+
+const translations = {
+    "en-IN": {
+        "app-title": "AgriSmart", "mode-farming": "Farming", "mode-gardening": "Gardening", 
+        "weather-title": "Local Weather", "quick-actions": "Quick Actions", 
+        "scan-plant": "Scan Crop", "view-history": "View History", 
+        "recent-diagnoses": "Recent Diagnoses", "diagnose-title": "Diagnose Your Crop", 
+        "diagnose-sub": "Upload or take a picture of the affected plant for instant AI analysis",
+        "tap-upload": "Tap to upload image", "drag-drop": "or drag and drop", 
+        "ai-analyzing": "AI is analyzing the image...", "analysis-failed": "Analysis Failed", 
+        "diagnosis": "Diagnosis", "listen": "Listen", "stop-audio": "Stop Audio",
+        "treatment-tab": "Treatment", "info-tab": "Information", "plant-care": "Plant Care & Tips", 
+        "organic-sol": "Organic Solutions", "chemical-int": "Chemical Interventions", 
+        "prevention": "Prevention Measures", "ask-ai": "Ask AI Assistant", 
+        "past-diagnoses": "Past Diagnoses", "scan-history": "Scan History", 
+        "no-history-msg": "Your previous scan history will appear here.",
+        "nav-dashboard": "Dashboard", "nav-history": "History", "chat-title": "Agri Expert", 
+        "chat-active": "Always active", "chat-started": "Chat started", "tap-speak": "Tap to Speak", 
+        "listening": "Listening...", "install-title": "Install AgriSmart", 
+        "install-sub": "Add to home screen for quick access", "install-btn": "Install"
+    },
+    "mr-IN": {
+        "app-title": "अॅग्रीस्मार्ट", "mode-farming": "शेती", "mode-gardening": "बागकाम", 
+        "weather-title": "स्थानिक हवामान", "quick-actions": "त्वरित क्रिया", 
+        "scan-plant": "पीक स्कॅन करा", "view-history": "इतिहास पहा", 
+        "recent-diagnoses": "अलीकडील निदान", "diagnose-title": "तुमच्या पिकाचे निदान करा", 
+        "diagnose-sub": "त्वरित एआय विश्लेषणासाठी प्रभावित वनस्पतीचे चित्र अपलोड करा",
+        "tap-upload": "चित्र अपलोड करण्यासाठी टॅप करा", "drag-drop": "किंवा ड्रॅग आणि ड्रॉप करा", 
+        "ai-analyzing": "एआय विश्लेषित करत आहे...", "analysis-failed": "विश्लेषण अयशस्वी", 
+        "diagnosis": "निदान", "listen": "ऐका", "stop-audio": "ऑडिओ थांबवा",
+        "treatment-tab": "उपचार", "info-tab": "माहिती", "plant-care": "वनस्पती काळजी आणि टिपा", 
+        "organic-sol": "सेंद्रिय उपाय", "chemical-int": "रासायनिक हस्तक्षेप", 
+        "prevention": "प्रतिबंधात्मक उपाय", "ask-ai": "एआय असिस्टंटला विचारा", 
+        "past-diagnoses": "मागील निदान", "scan-history": "स्कॅन इतिहास", 
+        "no-history-msg": "तुमचा पूर्वीचा स्कॅन इतिहास येथे दिसेल.",
+        "nav-dashboard": "डॅशबोर्ड", "nav-history": "इतिहास", "chat-title": "कृषी तज्ञ", 
+        "chat-active": "नेहमी सक्रिय", "chat-started": "चॅट सुरू झाले", "tap-speak": "बोलण्यासाठी टॅप करा", 
+        "listening": "ऐकत आहे...", "install-title": "अॅग्रीस्मार्ट इन्स्टॉल करा", 
+        "install-sub": "त्वरित प्रवेशासाठी होम स्क्रीनवर जोडा", "install-btn": "इन्स्टॉल करा"
+    },
+    "hi-IN": {
+        "app-title": "एग्रीस्मार्ट", "mode-farming": "खेती", "mode-gardening": "बागवानी", 
+        "weather-title": "स्थानीय मौसम", "quick-actions": "त्वरित कार्रवाइयां", 
+        "scan-plant": "फसल स्कैन करें", "view-history": "इतिहास देखें", 
+        "recent-diagnoses": "हाल के निदान", "diagnose-title": "अपनी फसल का निदान करें", 
+        "diagnose-sub": "त्वरित एआई विश्लेषण के लिए प्रभावित पौधे की तस्वीर अपलोड करें",
+        "tap-upload": "त तस्वीर अपलोड करने के लिए टैप करें", "drag-drop": "या खींचें और छोड़ें", 
+        "ai-analyzing": "एआई विश्लेषण कर रहा है...", "analysis-failed": "विश्लेषण विफल", 
+        "diagnosis": "निदान", "listen": "सुनें", "stop-audio": "ऑडियो रोकें",
+        "treatment-tab": "उपचार", "info-tab": "जानकारी", "plant-care": "पौधों की देखभाल और टिप्स", 
+        "organic-sol": "जैविक समाधान", "chemical-int": "रासायनिक हस्तक्षेप", 
+        "prevention": "रोकथाम के उपाय", "ask-ai": "एआई असिस्टेंट से पूछें", 
+        "past-diagnoses": "पिछले निदान", "scan-history": "स्कैन इतिहास", 
+        "no-history-msg": "आपका पिछला स्कैन इतिहास यहाँ दिखाई देगा।",
+        "nav-dashboard": "डैशबोर्ड", "nav-history": "इतिहास", "chat-title": "कृषि विशेषज्ञ", 
+        "chat-active": "हमेशा सक्रिय", "chat-started": "चैट शुरू हुई", "tap-speak": "बोलने के लिए टैप करें", 
+        "listening": "सुन रहा हूँ...", "install-title": "एग्रीस्मार्ट इंस्टॉल करें", 
+        "install-sub": "त्वरित पहुंच के लिए होम स्क्रीन पर जोड़ें", "install-btn": "इंस्टॉल करें"
+    },
+    "ta-IN": {
+        "app-title": "அக்ரிஸ்மார்ட்", "mode-farming": "விவசாயம்", "mode-gardening": "தோட்டக்கலை", 
+        "weather-title": "உள்ளூர் வானிலை", "quick-actions": "விரைவு செயல்கள்", 
+        "scan-plant": "பயிரை ஸ்கேன் செய்", "view-history": "வரலாற்றைக் காண்", 
+        "recent-diagnoses": "சமீபத்திய நோயறிதல்கள்", "diagnose-title": "உங்கள் பயிரை கண்டறியவும்", 
+        "diagnose-sub": "உடனடி AI பகுப்பாய்விற்கு தாவரத்தின் படத்தை பதிவேற்றவும்",
+        "tap-upload": "படத்தை பதிவேற்ற தட்டவும்", "drag-drop": "அல்லது இழுத்து விடவும்", 
+        "ai-analyzing": "AI பகுப்பாய்வு செய்கிறது...", "analysis-failed": "பகுப்பாய்வு தோல்வி", 
+        "diagnosis": "நோயறிதல்", "listen": "கேள்", "stop-audio": "ஒலியை நிறுத்து",
+        "treatment-tab": "சிகிச்சை", "info-tab": "தகவல்", "plant-care": "தாவர பராமரிப்பு & குறிப்புகள்", 
+        "organic-sol": "கரிம தீர்வுகள்", "chemical-int": "இரசாயன தலையீடுகள்", 
+        "prevention": "தடுப்பு நடவடிக்கைகள்", "ask-ai": "AI உதவியாளரிடம் கேள்", 
+        "past-diagnoses": "கடந்த நோயறிதல்கள்", "scan-history": "ஸ்கேன் வரலாறு", 
+        "no-history-msg": "உங்கள் முந்தைய ஸ்கேன் வரலாறு இங்கே தோன்றும்.",
+        "nav-dashboard": "முகப்பு", "nav-history": "வரலாறு", "chat-title": "வேளாண் நிபுணர்", 
+        "chat-active": "எப்போதும் செயலில்", "chat-started": "அரட்டை தொடங்கியது", "tap-speak": "பேச தட்டவும்", 
+        "listening": "கேட்கிறது...", "install-title": "அக்ரிஸ்மார்ட் நிறுவவும்", 
+        "install-sub": "விரைவான அணுகலுக்கு முகப்புத் திரையில் சேர்க்கவும்", "install-btn": "நிறுவு"
+    }
+};
+
+function updateLanguage() {
+    currentLang = document.getElementById('chat-language').value;
+    
+    // Update microphone language if it exists
+    if (typeof recognition !== 'undefined' && recognition) {
+        recognition.lang = currentLang; 
+    }
+    
+    // Find the correct dictionary
+    const dict = translations[currentLang] || translations["en-IN"];
+    
+    // Replace the text of ALL tagged items!
+    document.querySelectorAll('[data-translate]').forEach(el => {
+        const key = el.getAttribute('data-translate');
+        if (dict[key]) {
+            el.innerText = dict[key];
+        }
+    });
+}
+
+// Run this once when the app first loads
+document.addEventListener('DOMContentLoaded', updateLanguage);
+
 // --- User Mode State ---
 let userMode = 'farmer'; // Defaults to Farmer
 
@@ -741,12 +847,7 @@ function renderFullChat(autoScroll = true) {
 let preloadedAudioObj = null;
 
 //  NATIVE VOICE & MIC ENGINE ---
-let currentLang = 'en-IN'; 
 
-function updateLanguage() {
-    currentLang = document.getElementById('chat-language').value;
-    if (recognition) recognition.lang = currentLang; 
-}
 
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
