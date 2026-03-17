@@ -427,6 +427,8 @@ async function analyzeImage(base64Data, mimeType) {
         // This sends the image picture and the disease name to your new IndexedDB!
         saveToHistory(currentImageBase64, currentAnalysis.diseaseName || 'Healthy Plant');
         
+        // START THE BACKGROUND AUDIO FETCH INSTANTLY
+        preloadDiagnosisAudio(aiResponseText);
         chatMessages = [{
             role: 'system',
             content: `I am your Agri-Assistant. I analyzed the ${currentAnalysis.cropName} leaf and detected ${currentAnalysis.healthStatus.toLowerCase().includes('health') ? 'no diseases' : currentAnalysis.diseaseName}. Do you have any questions? Please respond in ${selectedLanguage}.`
@@ -641,9 +643,223 @@ function stopAllAudio() {
     activeChatAudioIndex = -1;
     renderChat(); // Updates the icons inside the chat
 }
+// --- FULL SCREEN CHAT & VOICE TYPING LOGIC ---
 
+// 1. Open/Close Modal
+function openFullScreenChat() {
+    const modal = document.getElementById('full-chat-modal');
+    modal.classList.remove('hidden');
+    setTimeout(() => modal.classList.remove('translate-y-full'), 10);
+    renderFullChat();
+}
+
+function closeFullScreenChat() {
+    const modal = document.getElementById('full-chat-modal');
+    modal.classList.add('translate-y-full');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+    if(isRecording) toggleVoiceTyping(); // Stop mic if open
+}
+
+// 2. Voice Typing (Speech to Text)
+let isRecording = false;
+let recognition = null;
+
+// Initialize native browser speech recognition
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN'; // You can change this to 'hi-IN' for Hindi, etc.
+
+    recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('mic-btn').classList.replace('bg-emerald-50', 'bg-red-100');
+        document.getElementById('mic-btn').classList.replace('text-emerald-600', 'text-red-600');
+        document.getElementById('mic-status').innerText = "Listening...";
+        document.getElementById('mic-icon').setAttribute('data-lucide', 'mic-off');
+        lucide.createIcons();
+    };
+
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                document.getElementById('full-chat-input').value += event.results[i][0].transcript + ' ';
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+    };
+
+    recognition.onerror = (event) => { console.error("Speech error", event.error); toggleVoiceTyping(); };
+    recognition.onend = () => { if(isRecording) toggleVoiceTyping(); };
+}
+
+function toggleVoiceTyping() {
+    if (!recognition) { alert("Voice typing is not supported in this browser."); return; }
+    
+    if (isRecording) {
+        recognition.stop();
+        isRecording = false;
+        document.getElementById('mic-btn').classList.replace('bg-red-100', 'bg-emerald-50');
+        document.getElementById('mic-btn').classList.replace('text-red-600', 'text-emerald-600');
+        document.getElementById('mic-status').innerText = "Tap to Speak";
+        document.getElementById('mic-icon').setAttribute('data-lucide', 'mic');
+        lucide.createIcons();
+    } else {
+        document.getElementById('full-chat-input').value = ''; // Clear input for new speech
+        recognition.start();
+    }
+}
+
+// 3. Auto-Play Audio Function
+async function fetchAndPlayAutoAudio(textToSpeak) {
+    try {
+        const response = await fetch('/api/tts', {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ contents: [{ parts: [{ text: textToSpeak }] }] })
+        });
+        const data = await response.json();
+        
+        const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+        if (audioPart) {
+            const binaryString = atob(audioPart.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+            
+            const wavBuffer = pcmToWav(bytes.buffer, 24000); // Uses your existing safe pcmToWav
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            
+            if(audioObj) audioObj.pause(); // Stop old audio
+            audioObj = new Audio(URL.createObjectURL(blob));
+            
+            // Auto-play the audio the moment it's ready!
+            audioObj.play().catch(e => console.log("Auto-play blocked by browser. User must click play.", e));
+        }
+    } catch (err) {
+        console.error("Auto Audio Error:", err);
+    }
+}
+
+// 4. Send Message & Render Logic (Replace your old chat functions with these)
+async function sendFullChatMessage() {
+    const input = document.getElementById('full-chat-input');
+    const text = input.value.trim();
+    if (!text || isChatting) return;
+
+    input.value = '';
+    chatMessages.push({ role: "user", content: text });
+    isChatting = true;
+    renderFullChat();
+
+    try {
+        // Send to your existing /api/chat endpoint
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: chatMessages })
+        });
+        const data = await response.json();
+        const reply = data.candidates[0].content.parts[0].text;
+        
+        chatMessages.push({ role: "model", content: reply });
+        
+        // --- THE MAGIC: Trigger Auto-Play Audio immediately! ---
+        fetchAndPlayAutoAudio(reply);
+
+    } catch (error) {
+        chatMessages.push({ role: "model", content: "Sorry, I had trouble connecting. Please try again." });
+    }
+    
+    isChatting = false;
+    renderFullChat();
+}
+
+function renderFullChat() {
+    const container = document.getElementById('full-chat-container');
+    let html = '';
+    
+    chatMessages.forEach((msg, index) => {
+        if (msg.role === 'system') return; 
+        const isUser = msg.role === 'user';
+        
+        let formattedContent = isUser ? msg.content : marked.parse(msg.content);
+
+        html += `
+            <div class="flex ${isUser ? 'justify-end' : 'justify-start'} w-full mb-4">
+                <div style="width: fit-content; max-width: 85%; word-break: break-word;" 
+                     class="px-4 py-3 shadow-sm text-[15px] ${isUser ? 'bg-emerald-600 text-white rounded-2xl rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-none chat-markdown'}">
+                    ${formattedContent}
+                </div>
+            </div>
+        `;
+    });
+
+    if (isChatting) {
+        html += `
+            <div class="flex justify-start w-full mb-4">
+                <div style="width: fit-content;" class="bg-white border border-gray-200 px-5 py-4 rounded-2xl rounded-bl-none shadow-sm flex items-center space-x-1.5">
+                    <div class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce"></div>
+                    <div class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html; 
+    container.scrollTop = container.scrollHeight;
+    document.getElementById('full-send-btn').disabled = isChatting; 
+    lucide.createIcons();
+}
+
+// --- AUDIO PRELOADING LOGIC ---
+let preloadedAudioObj = null;
+
+async function preloadDiagnosisAudio(textToSpeak) {
+    if (!textToSpeak || textToSpeak.trim() === "") return;
+    
+    // Reset any old audio
+    preloadedAudioObj = null; 
+    console.log("Secretly preloading audio in the background...");
+
+    try {
+        const response = await fetch('/api/tts', {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ contents: [{ parts: [{ text: textToSpeak }] }] })
+        });
+        
+        const data = await response.json();
+        const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+        
+        if (audioPart) {
+            // Convert it using your bulletproof function
+            const binaryString = atob(audioPart.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+            
+            const wavBuffer = pcmToWav(bytes.buffer, 24000);
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            
+            // Save it to our hidden variable!
+            preloadedAudioObj = new Audio(URL.createObjectURL(blob));
+            
+            preloadedAudioObj.onended = () => { 
+                isPlayingAudio = false; 
+                if (typeof updateTtsUI !== 'undefined') updateTtsUI(); 
+            };
+            console.log("Audio preloaded and ready for instant playback! 🚀");
+        }
+    } catch (err) {
+        console.error("Background preload failed (will fallback to normal loading):", err);
+    }
+}
 async function toggleTTS() {
     if (isPlayingAudio) { stopAllAudio(); return; }
+    
     if (!ttsSummaryText || ttsSummaryText.trim() === "") {
         alert("Please wait for the AI to finish writing first.");
         return;
@@ -651,9 +867,24 @@ async function toggleTTS() {
 
     stopAllAudio(); 
     isPlayingAudio = true; 
-    document.getElementById('tts-text').innerText = "Loading..."; 
     if (typeof updateTtsUI !== 'undefined') updateTtsUI();
 
+    // 1. THE MAGIC FIX: If the audio is already preloaded, play it instantly!
+    if (preloadedAudioObj) {
+        console.log("Playing instant preloaded audio!");
+        audioObj = preloadedAudioObj; 
+        
+        audioObj.play().catch(err => {
+            alert("Browser Blocked Audio: Please ensure your phone is not on silent.");
+            stopAllAudio();
+        });
+        return; 
+    }
+
+    // 2. FALLBACK: If they clicked "Listen" incredibly fast before the background load finished,
+    // we fall back to the standard loading method just to be safe.
+    document.getElementById('tts-text').innerText = "Loading..."; 
+    
     try {
         const response = await fetch('/api/tts', {
             method: 'POST', 
@@ -662,42 +893,27 @@ async function toggleTTS() {
         });
         
         const data = await response.json();
-        
-        if (!response.ok || data.error) {
-            alert("Google API Error: " + (data.error || "Failed to generate audio"));
-            stopAllAudio(); return;
-        }
+        if (!response.ok || data.error) throw new Error(data.error || "API Error");
 
         const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-        
         if (audioPart) {
-            // SAFETY NET: If Google ever upgrades to return ready-to-play MP3/WAV files, just play it!
-            if (audioPart.mimeType && (audioPart.mimeType.includes('wav') || audioPart.mimeType.includes('mpeg') || audioPart.mimeType.includes('mp3'))) {
-                const audioUrl = `data:${audioPart.mimeType};base64,${audioPart.data}`;
-                audioObj = new Audio(audioUrl);
-            } else {
-                // Otherwise, it's raw PCM data. Convert it using our fixed function.
-                const binaryString = atob(audioPart.data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-                
-                const wavBuffer = pcmToWav(bytes.buffer, 24000);
-                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-                audioObj = new Audio(URL.createObjectURL(blob));
-            }
+            const binaryString = atob(audioPart.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
             
+            const wavBuffer = pcmToWav(bytes.buffer, 24000);
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            
+            audioObj = new Audio(URL.createObjectURL(blob));
             audioObj.onended = () => { isPlayingAudio = false; if (typeof updateTtsUI !== 'undefined') updateTtsUI(); }; 
             
             audioObj.play().catch(err => {
                 alert("Browser Blocked Audio: Please ensure your phone is not on silent.");
                 stopAllAudio();
             });
-        } else {
-            alert("Google AI did not return an audio file.");
-            stopAllAudio();
         }
     } catch (err) { 
-        alert("Network Error: " + err.message);
+        alert("Audio Error: " + err.message);
         stopAllAudio(); 
     }
 }
