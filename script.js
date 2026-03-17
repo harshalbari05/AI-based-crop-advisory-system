@@ -629,21 +629,31 @@ function stopAllAudio() {
 
 async function toggleTTS() {
     if (isPlayingAudio) { stopAllAudio(); return; }
+
+    // 1. Safeguard: Prevent sending empty text (which causes HTTP 400)
+    if (!ttsSummaryText || ttsSummaryText.trim() === "") {
+        alert("Please wait for the AI to finish typing the diagnosis before playing audio!");
+        return;
+    }
+
     stopAllAudio(); 
     isPlayingAudio = true; 
     document.getElementById('tts-text').innerText = "Loading..."; 
-    updateTtsUI();
+    if (typeof updateTtsUI !== 'undefined') updateTtsUI();
 
     try {
-        const data = await fetchWithRetry('/api/tts', {
+        // 2. Direct fetch so we can see exact errors
+        const response = await fetch('/api/tts', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ contents: [{ parts: [{ text: ttsSummaryText }] }] })
         });
         
-        // Check if we got an error from our backend
-        if (data.error) {
-            alert("Backend Error: " + data.error);
+        const data = await response.json();
+        
+        // 3. Catch Google's exact error message
+        if (!response.ok || data.error) {
+            alert("Google API Error: " + (data.error || "Failed to generate audio"));
             stopAllAudio();
             return;
         }
@@ -658,18 +668,18 @@ async function toggleTTS() {
             const blob = new Blob([pcmToWav(bytes.buffer, 24000)], { type: 'audio/wav' });
             audioObj = new Audio(URL.createObjectURL(blob));
             
-            audioObj.onended = () => { isPlayingAudio = false; updateTtsUI(); }; 
+            audioObj.onended = () => { isPlayingAudio = false; if (typeof updateTtsUI !== 'undefined') updateTtsUI(); }; 
             
             audioObj.play().catch(err => {
                 alert("Browser Audio Blocked: " + err.message);
                 stopAllAudio();
             });
         } else {
-            alert("Google AI did not return an audio file. It returned text instead.");
+            alert("Google AI did not return an audio file.");
             stopAllAudio();
         }
     } catch (err) { 
-        alert("Network/Fetch Error: " + err.message);
+        alert("Network Error: " + err.message);
         stopAllAudio(); 
     }
 }
