@@ -593,29 +593,44 @@ function renderChat() {
 }
 
 // --- API Integration: TTS Audio ---
-const pcmToWav = (pcmData, sampleRate) => {
-    const numChannels = 1;
-    const byteRate = sampleRate * numChannels * 2;
-    const blockAlign = numChannels * 2;
-    const buffer = new ArrayBuffer(44 + pcmData.length);
+// 1. The Bulletproof Audio Converter
+function pcmToWav(pcmData, sampleRate) {
+    const numChannels = 1; 
+    const bitsPerSample = 16;
+    
+    // THE FIX: Force the data size to be an even number so the DataView never crashes!
+    const dataSize = Math.floor(pcmData.byteLength / 2) * 2; 
+    
+    const buffer = new ArrayBuffer(44 + dataSize);
     const view = new DataView(buffer);
 
     const writeString = (view, offset, string) => {
-        for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
     };
 
-    writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + pcmData.length, true);
-    writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
-    writeString(view, 36, 'data'); view.setUint32(40, pcmData.length, true);
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * (bitsPerSample / 8), true);
+    view.setUint16(32, numChannels * (bitsPerSample / 8), true);
+    view.setUint16(34, bitsPerSample, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
 
-    const pcmBytes = new Uint8Array(pcmData);
-    const wavBytes = new Uint8Array(buffer);
-    wavBytes.set(pcmBytes, 44);
+    const pcmView = new DataView(pcmData);
+    for (let i = 0; i < dataSize; i += 2) {
+        view.setInt16(44 + i, pcmView.getInt16(i, true), true); 
+    }
+
     return buffer;
-};
+}
 
 function stopAllAudio() {
     if (audioObj) { audioObj.pause(); audioObj = null; }
@@ -629,10 +644,8 @@ function stopAllAudio() {
 
 async function toggleTTS() {
     if (isPlayingAudio) { stopAllAudio(); return; }
-
-    // 1. Safeguard: Prevent sending empty text (which causes HTTP 400)
     if (!ttsSummaryText || ttsSummaryText.trim() === "") {
-        alert("Please wait for the AI to finish typing the diagnosis before playing audio!");
+        alert("Please wait for the AI to finish writing first.");
         return;
     }
 
@@ -642,7 +655,6 @@ async function toggleTTS() {
     if (typeof updateTtsUI !== 'undefined') updateTtsUI();
 
     try {
-        // 2. Direct fetch so we can see exact errors
         const response = await fetch('/api/tts', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
@@ -651,27 +663,33 @@ async function toggleTTS() {
         
         const data = await response.json();
         
-        // 3. Catch Google's exact error message
         if (!response.ok || data.error) {
             alert("Google API Error: " + (data.error || "Failed to generate audio"));
-            stopAllAudio();
-            return;
+            stopAllAudio(); return;
         }
 
         const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
         
         if (audioPart) {
-            const binaryString = atob(audioPart.data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            
-            const blob = new Blob([pcmToWav(bytes.buffer, 24000)], { type: 'audio/wav' });
-            audioObj = new Audio(URL.createObjectURL(blob));
+            // SAFETY NET: If Google ever upgrades to return ready-to-play MP3/WAV files, just play it!
+            if (audioPart.mimeType && (audioPart.mimeType.includes('wav') || audioPart.mimeType.includes('mpeg') || audioPart.mimeType.includes('mp3'))) {
+                const audioUrl = `data:${audioPart.mimeType};base64,${audioPart.data}`;
+                audioObj = new Audio(audioUrl);
+            } else {
+                // Otherwise, it's raw PCM data. Convert it using our fixed function.
+                const binaryString = atob(audioPart.data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                
+                const wavBuffer = pcmToWav(bytes.buffer, 24000);
+                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                audioObj = new Audio(URL.createObjectURL(blob));
+            }
             
             audioObj.onended = () => { isPlayingAudio = false; if (typeof updateTtsUI !== 'undefined') updateTtsUI(); }; 
             
             audioObj.play().catch(err => {
-                alert("Browser Audio Blocked: " + err.message);
+                alert("Browser Blocked Audio: Please ensure your phone is not on silent.");
                 stopAllAudio();
             });
         } else {
