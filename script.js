@@ -178,7 +178,8 @@ async function loadHistory() {
 }
 
 // 3. Save new diagnosis to the permanent database
-async function saveToHistory(imageSrc, diagnosisText) {
+// 3. Save full diagnosis to the permanent database
+async function saveToHistory(imageSrc, analysisData) {
     try {
         if (!db) await initDB();
         
@@ -186,7 +187,8 @@ async function saveToHistory(imageSrc, diagnosisText) {
             id: Date.now(),
             date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             image: imageSrc,
-            text: diagnosisText
+            text: analysisData.diseaseName || 'Healthy Plant',
+            analysisData: analysisData // ⚡ FIX: Saves the entire AI JSON object!
         };
         
         const transaction = db.transaction(['diagnoses'], 'readwrite');
@@ -202,6 +204,21 @@ async function saveToHistory(imageSrc, diagnosisText) {
     }
 }
 
+// NEW: Function to re-load an entire historical scan
+window.viewHistoryItem = function(id) {
+    const item = diagnosisHistory.find(i => i.id === id);
+    // Safety check: Make sure it's a new scan that actually has the full data saved
+    if (item && item.analysisData) {
+        currentImageBase64 = item.image;
+        currentAnalysis = item.analysisData;
+        populateResults(); // Re-build the HTML with the saved data
+        closeHistory();    // Close the history modal
+        switchTab('results'); // Jump to the results screen
+    } else {
+        alert("This is an old scan that didn't save the full details. Please scan again!");
+    }
+};
+
 // 4. UI Functions (Open, Close, Render)
 function openHistory() {
     const modal = document.getElementById('history-modal');
@@ -216,11 +233,10 @@ function closeHistory() {
 }
 
 function renderHistory() {
-    // Grab both HTML containers (the modal list AND the dashboard list)
     const historyModalList = document.getElementById('history-list');
     const dashboardList = document.getElementById('dashboard-recent-list');
     
-    // IF EMPTY: Show empty states for both
+    // IF EMPTY: Show empty states
     if (diagnosisHistory.length === 0) {
         if (historyModalList) {
             historyModalList.innerHTML = `
@@ -238,35 +254,34 @@ function renderHistory() {
         return;
     }
 
-    // 1. Render FULL list for the History Modal
+    // 1. Render FULL list for the History Modal (NOW CLICKABLE!)
     if (historyModalList) {
         historyModalList.innerHTML = diagnosisHistory.map(item => `
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex space-x-3 items-center">
+            <div onclick="viewHistoryItem(${item.id})" class="cursor-pointer bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex space-x-3 items-center hover:bg-emerald-50 transition active:scale-[0.98]">
                 <img src="${item.image}" class="w-16 h-16 rounded-xl object-cover border border-gray-100 flex-shrink-0">
                 <div class="flex-1">
                     <p class="text-xs text-gray-400 mb-1">${item.date}</p>
-                    <p class="text-sm font-medium text-gray-800 line-clamp-2">${item.text.substring(0, 75)}...</p>
+                    <p class="text-sm font-bold text-gray-800 line-clamp-2">${item.text}</p>
                 </div>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-emerald-600 opacity-60"></i>
             </div>
         `).join('');
     }
 
-    // 2. Render ONLY TOP 3 for the Dashboard (Home Screen)
+    // 2. Render ONLY TOP 3 for the Dashboard (NOW CLICKABLE!)
     if (dashboardList) {
-        // .slice(0, 3) grabs just the first three items!
         dashboardList.innerHTML = diagnosisHistory.slice(0, 3).map(item => `
-            <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex space-x-3 items-center">
+            <div onclick="viewHistoryItem(${item.id})" class="cursor-pointer bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex space-x-3 items-center hover:bg-emerald-50 transition active:scale-[0.98]">
                 <img src="${item.image}" class="w-12 h-12 rounded-lg object-cover border border-gray-100 flex-shrink-0">
                 <div class="flex-1">
                     <p class="text-[10px] text-gray-400 mb-0.5">${item.date}</p>
                     <p class="text-sm font-bold text-gray-800 line-clamp-1">${item.text}</p>
                 </div>
-                <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-300"></i>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-500 opacity-60"></i>
             </div>
         `).join('');
     }
     
-    // Redraw icons for the newly injected HTML
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -479,8 +494,7 @@ async function analyzeImage(base64Data, mimeType) {
         
         populateResults();
         // This sends the image picture and the disease name to your new IndexedDB!
-        saveToHistory(currentImageBase64, currentAnalysis.diseaseName || 'Healthy Plant');
-        
+        saveToHistory(currentImageBase64, currentAnalysis);        
         // START THE BACKGROUND AUDIO FETCH INSTANTLY
         
         chatMessages = [{
