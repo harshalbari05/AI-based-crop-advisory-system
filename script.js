@@ -184,7 +184,7 @@ async function fetchWeather(lat, lon, cityName = null) {
 
     } catch (error) {
         console.error("Weather error:", error);
-        document.getElementById('weather-city').innerText = "Offline";
+        document.getElementById('weather-city').innerText = "Pune, MH";
         document.getElementById('weather-desc').innerText = "Check connection";
     }
 }
