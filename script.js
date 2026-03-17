@@ -27,13 +27,10 @@ let currentAnalysis = null;
 let chatMessages = [];
 let isChatting = false;
 
-let audioObj = null;
 let isPlayingAudio = false;
 let ttsSummaryText = "";
 
-// Chat Audio State
-let activeChatAudio = null;
-let activeChatAudioIndex = -1;
+
 // --- Live Weather System ---
 async function fetchWeather(lat, lon, cityName = null) {
     try {
@@ -539,12 +536,12 @@ function populateResults() {
 
 
 function stopAllAudio() {
-    if (audioObj) { audioObj.pause(); audioObj = null; }
-    isPlayingAudio = false; 
-    updateTtsUI();
+    window.speechSynthesis.cancel(); 
     
-    if (activeChatAudio) { activeChatAudio.pause(); activeChatAudio = null; }
+    isPlayingAudio = false; 
     activeChatAudioIndex = -1;
+    
+    if (typeof updateTtsUI !== 'undefined') updateTtsUI();
 }
 // --- FULL SCREEN CHAT & VOICE TYPING LOGIC ---
 
@@ -792,7 +789,6 @@ async function playChatAudio(index) {
     stopAllAudio();
 
     activeChatAudioIndex = index;
-    renderChat(); // Re-render to show loading/stop state on the button
 
     // Clean the text to remove markdown characters so the AI reads it naturally
     const cleanText = msg.content.replace(/[*#_]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
@@ -830,7 +826,6 @@ async function playChatAudio(index) {
     } catch (err) {
         console.error("Chat TTS Error:", err);
         activeChatAudioIndex = -1;
-        renderChat();
     }
 }
 
