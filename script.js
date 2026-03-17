@@ -4,6 +4,25 @@ const url = `/api/analyze`;
 lucide.createIcons();
 
 let currentImageBase64 = null;
+// --- User Mode State ---
+let userMode = 'farmer'; // Defaults to Farmer
+
+function setUserMode(mode) {
+    userMode = mode;
+    const slider = document.getElementById('toggle-slider');
+    const btnFarmer = document.getElementById('btn-farmer');
+    const btnGardener = document.getElementById('btn-gardener');
+
+    if (mode === 'farmer') {
+        slider.style.transform = 'translateX(0)';
+        btnFarmer.classList.replace('text-gray-500', 'text-emerald-700');
+        btnGardener.classList.replace('text-emerald-700', 'text-gray-500');
+    } else {
+        slider.style.transform = 'translateX(100%)';
+        btnFarmer.classList.replace('text-emerald-700', 'text-gray-500');
+        btnGardener.classList.replace('text-gray-500', 'text-emerald-700');
+    }
+}
 let currentAnalysis = null;
 let chatMessages = [];
 let isChatting = false;
@@ -381,19 +400,26 @@ async function analyzeImage(base64Data, mimeType) {
     scanLoading.classList.remove('hidden');
     scanError.classList.add('hidden');
     
-    const selectedLanguage = document.getElementById('language-select').value;
+    const selectedLanguage = document.getElementById('chat-language').value;
+    
+    // 1. Give the AI context based on the toggle switch!
+    const modeContext = userMode === 'farmer' 
+        ? "You are advising a commercial farmer. Focus on large-scale crop management, agricultural treatments, and commercial pesticides if necessary." 
+        : "You are advising a home gardener. Focus on houseplants, home gardens, small-scale organic remedies, and ignore large-scale agricultural chemicals.";
     
     const prompt = `
-        You are an expert agronomist. Analyze this image of a crop leaf. 
-        Provide a diagnosis including the crop name, disease name (if any), health status, and a confidence score.
-        Also list symptoms, causes, prevention methods, organic treatments, and chemical treatments.
-        IMPORTANT: Translate all text values in your JSON response to ${selectedLanguage}. The JSON keys must remain in English, but the content must be in ${selectedLanguage}.
+        You are an expert botanist and agronomist. Analyze this image. 
+        ${modeContext}
+        Provide a diagnosis including the plant/crop name, disease name (if any), health status, and a confidence score.
+        List symptoms, causes, prevention, organic treatments, chemical treatments (if appropriate), and general care tips.
+        IMPORTANT: Translate all text values in your JSON response to ${selectedLanguage}. The JSON keys must remain in English.
     `;
 
+    // 2. Updated Schema to include Care Tips
     const schema = {
         type: "OBJECT",
         properties: {
-            cropName: { type: "STRING" },
+            cropName: { type: "STRING" }, // Kept as cropName to avoid breaking your HTML bindings
             diseaseName: { type: "STRING" },
             healthStatus: { type: "STRING", description: "Healthy, Mildly Infected, Severely Infected" },
             confidenceScore: { type: "INTEGER", description: "0-100" },
@@ -401,7 +427,8 @@ async function analyzeImage(base64Data, mimeType) {
             causes: { type: "ARRAY", items: { type: "STRING" } },
             prevention: { type: "ARRAY", items: { type: "STRING" } },
             treatmentOrganic: { type: "ARRAY", items: { type: "STRING" } },
-            treatmentChemical: { type: "ARRAY", items: { type: "STRING" } }
+            treatmentChemical: { type: "ARRAY", items: { type: "STRING" } },
+            careTips: { type: "ARRAY", items: { type: "STRING", description: "Sunlight, watering, and soil advice" } }
         }
     };
 
@@ -493,8 +520,6 @@ function populateResults() {
     }
 }
 
-// --- API Integration: Chat ---
-
 
 // --- API Integration: TTS Audio ---
 
@@ -568,32 +593,52 @@ async function sendFullChatMessage() {
     const text = input.value.trim();
     if (!text || isChatting) return;
 
+    // 1. Show the user's message in the chat UI instantly
     input.value = '';
     chatMessages.push({ role: "user", content: text });
     isChatting = true;
     renderFullChat();
 
+    // 2. Build the Smart Context (Language + Farmer/Gardener Mode)
+    const selectedLanguage = document.getElementById('chat-language').value;
+    const userRole = userMode === 'farmer' ? 'commercial farmer' : 'home gardener';
+    
+    // Safely get the plant name in case they haven't scanned anything yet
+    const cropName = currentAnalysis?.cropName || currentAnalysis?.plantName || "plant";
+    const diseaseName = currentAnalysis?.diseaseName || "an unknown condition";
+
+    const systemContext = `You are an AI agricultural assistant advising a ${userRole}. The user previously uploaded an image of a ${cropName} diagnosed with ${diseaseName}. User asks: ${text}. Respond thoroughly in ${selectedLanguage}, keeping their scale (${userRole}) in mind. Use plain formatting easily readable by Text-to-Speech engines.`;
+
     try {
-        // Send to your existing /api/chat endpoint
-        const response = await fetch('/api/chat', {
+        // 3. Send the highly specific prompt to your Gemini API
+        const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: chatMessages })
+            body: JSON.stringify({ 
+                contents: [{ role: "user", parts: [{ text: systemContext }] }] 
+            })
         });
+        
         const data = await response.json();
+        
+        if (!response.ok || data.error) {
+            throw new Error(data.error?.message || "Failed to get AI response");
+        }
+
         const reply = data.candidates[0].content.parts[0].text;
         
+        // 4. Save the AI's reply to the chat and speak it out loud for free!
         chatMessages.push({ role: "model", content: reply });
-        
-        // --- THE MAGIC: Trigger Auto-Play Audio immediately! ---
         playNativeAudio(reply);
 
     } catch (error) {
+        console.error("Chat Error:", error);
         chatMessages.push({ role: "model", content: "Sorry, I had trouble connecting. Please try again." });
+    } finally {
+        // 5. Turn off the typing animation and re-render the chat
+        isChatting = false;
+        renderFullChat();
     }
-    
-    isChatting = false;
-    renderFullChat();
 }
 
 function renderFullChat() {

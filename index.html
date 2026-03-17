@@ -55,6 +55,19 @@
 
     <!-- Main Content Area -->
     <main class="max-w-4xl mx-auto p-4 pt-6 pb-24">
+        <div class="flex justify-center mb-6 mt-2">
+            <div class="bg-gray-200 p-1 rounded-full flex items-center shadow-inner relative w-64 border border-gray-300">
+                <div id="toggle-slider" class="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out transform translate-x-0"></div>
+                
+                <button onclick="setUserMode('farmer')" id="btn-farmer" class="flex-1 relative z-10 py-2 text-sm font-bold flex items-center justify-center text-emerald-700 transition-colors duration-300">
+                    <i data-lucide="tractor" class="w-4 h-4 mr-2"></i> Farmer
+                </button>
+                
+                <button onclick="setUserMode('gardener')" id="btn-gardener" class="flex-1 relative z-10 py-2 text-sm font-bold flex items-center justify-center text-gray-500 transition-colors duration-300">
+                    <i data-lucide="flower-2" class="w-4 h-4 mr-2"></i> Gardener
+                </button>
+            </div>
+        </div>
         
         <!-- ================= HOME VIEW ================= -->
         <div id="home-view" class="view-section space-y-6">
