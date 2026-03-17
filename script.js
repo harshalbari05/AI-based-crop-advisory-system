@@ -412,7 +412,8 @@ async function analyzeImage(base64Data, mimeType) {
         ${modeContext}
         Provide a diagnosis including the plant/crop name, disease name (if any), health status, and a confidence score.
         List symptoms, causes, prevention, organic treatments, chemical treatments (if appropriate), and general care tips.
-        IMPORTANT: Translate all text values in your JSON response to ${selectedLanguage}. The JSON keys must remain in English.
+        CRITICAL SPEED RULE: Be highly concise. Keep all lists to a maximum of 2 bullet points.
+        IMPORTANT: Translate all text values in your JSON response to ${selectedLanguage}.
     `;
 
     // 2. Updated Schema to include Care Tips
