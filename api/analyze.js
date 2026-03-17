@@ -25,7 +25,8 @@ export default async function handler(req, res) {
             causes: { type: "ARRAY", items: { type: "STRING" } },
             prevention: { type: "ARRAY", items: { type: "STRING" } },
             treatmentOrganic: { type: "ARRAY", items: { type: "STRING" } },
-            treatmentChemical: { type: "ARRAY", items: { type: "STRING" } }
+            treatmentChemical: { type: "ARRAY", items: { type: "STRING" } },
+            careTips: { type: "ARRAY", items: { type: "STRING" } } 
         }
     };
 
