@@ -283,7 +283,6 @@ async function loadHistory() {
     }
 }
 
-// 3. Save new diagnosis to the permanent database
 // 3. Save full diagnosis to the permanent database
 async function saveToHistory(imageSrc, analysisData) {
     try {
@@ -294,7 +293,7 @@ async function saveToHistory(imageSrc, analysisData) {
             date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
             image: imageSrc,
             text: analysisData.diseaseName || 'Healthy Plant',
-            analysisData: analysisData // ⚡ FIX: Saves the entire AI JSON object!
+            analysisData: analysisData // <--- THIS SAVES THE ENTIRE AI RESULT FOREVER!
         };
         
         const transaction = db.transaction(['diagnoses'], 'readwrite');
@@ -309,6 +308,32 @@ async function saveToHistory(imageSrc, analysisData) {
         console.error("Failed to save to history:", error);
     }
 }
+
+// Re-load an entire historical scan when clicked
+window.viewHistoryItem = function(id) {
+    const item = diagnosisHistory.find(i => i.id === id);
+    if (!item) return;
+
+    // Check if it's a new scan that actually has the data saved
+    if (item.analysisData) {
+        currentImageBase64 = item.image;
+        currentAnalysis = item.analysisData; // Grab the saved AI results
+        
+        populateResults(); // Re-build the screen with the old results
+        
+        // Close the history modal if it is open
+        const modal = document.getElementById('history-modal');
+        if (modal && !modal.classList.contains('hidden')) {
+            closeHistory();
+        }
+        
+        // Switch to the Results tab!
+        switchTab('results'); 
+    } else {
+        // If they click an old scan from yesterday, gently tell them to scan a new one
+        alert("This is an old scan from before the database upgrade. The details weren't saved back then. Please take a new scan!");
+    }
+};
 
 // NEW: Function to re-load an entire historical scan
 window.viewHistoryItem = function(id) {
