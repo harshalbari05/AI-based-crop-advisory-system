@@ -428,7 +428,7 @@ async function analyzeImage(base64Data, mimeType) {
         saveToHistory(currentImageBase64, currentAnalysis.diseaseName || 'Healthy Plant');
         
         // START THE BACKGROUND AUDIO FETCH INSTANTLY
-        preloadDiagnosisAudio(resultText);
+        
         chatMessages = [{
             role: 'system',
             content: `I am your Agri-Assistant. I analyzed the ${currentAnalysis.cropName} leaf and detected ${currentAnalysis.healthStatus.toLowerCase().includes('health') ? 'no diseases' : currentAnalysis.diseaseName}. Do you have any questions? Please respond in ${selectedLanguage}.`
