@@ -436,8 +436,7 @@ async function analyzeImage(base64Data, mimeType) {
         
         // Automatically stop old audio if restarting analysis
         stopAllAudio();
-        
-        renderChat();
+    
         switchTab('results');
         
     } catch (err) {
@@ -495,104 +494,7 @@ function populateResults() {
 }
 
 // --- API Integration: Chat ---
-function handleChatKeyPress(e) {
-    if(e.key === 'Enter') handleSendMessage();
-}
 
-async function handleSendMessage() {
-    const inputEl = document.getElementById('chat-input');
-    const val = inputEl.value.trim();
-    if(!val || isChatting) return;
-
-    chatMessages.push({ role: 'user', content: val });
-    inputEl.value = '';
-    isChatting = true;
-    renderChat();
-
-    const selectedLanguage = document.getElementById('language-select').value;
-    const systemContext = `You are an AI agricultural assistant. The user previously uploaded an image of a ${currentAnalysis.cropName} leaf diagnosed with ${currentAnalysis.diseaseName}. User asks: ${val}. Respond thoroughly in ${selectedLanguage}. Use plain formatting easily readable by Text-to-Speech engines.`;
-
-    const payload = { contents: [{ role: "user", parts: [{ text: systemContext }] }] };
-
-    try {
-        const url = `/api/analyze`;
-        const data = await fetchWithRetry(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        const botReply = data.candidates[0].content.parts[0].text;
-        chatMessages.push({ role: 'assistant', content: botReply });
-    } catch (err) {
-        chatMessages.push({ role: 'assistant', content: "Error: " + err.message });
-    } finally {
-        isChatting = false;
-        renderChat();
-    }
-}
-
-function renderChat() {
-    const container = document.getElementById('chat-container');
-    let html = '';
-    
-    chatMessages.forEach((msg, index) => {
-        if (msg.role === 'system') return; 
-        const isUser = msg.role === 'user';
-        
-        let formattedContent = '';
-        if (isUser) {
-            formattedContent = msg.content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
-        } else {
-            formattedContent = marked.parse(msg.content);
-        }
-        
-        let audioBtnHtml = '';
-        if (!isUser) {
-            const isPlaying = activeChatAudioIndex === index;
-            const iconName = isPlaying ? 'square' : 'volume-2';
-            const btnColor = isPlaying ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-gray-50 text-emerald-600 hover:bg-emerald-50 border-gray-200';
-            
-            audioBtnHtml = `
-                <div class="mt-2 pt-2 border-t border-gray-100 flex justify-end">
-                    <button onclick="playChatAudio(${index})" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition ${btnColor} border">
-                        <i data-lucide="${iconName}" class="w-3.5 h-3.5 fill-current"></i>
-                        <span>${isPlaying ? 'Stop Listening' : 'Listen to Advice'}</span>
-                    </button>
-                </div>
-            `;
-        }
-
-        // THE FIX: Added style="width: fit-content; word-break: break-word;" directly to the HTML
-        html += `
-            <div class="flex ${isUser ? 'justify-end' : 'justify-start'} w-full mb-3">
-                <div style="width: fit-content; max-width: 85%; word-break: break-word;" 
-                        class="px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isUser ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none chat-markdown'}">
-                    ${formattedContent}
-                    ${audioBtnHtml}
-                </div>
-            </div>
-        `;
-    });
-
-    if (isChatting) {
-        // THE FIX: Added style="width: fit-content;" to the typing dots too!
-        html += `
-            <div class="flex justify-start w-full mb-3">
-                <div style="width: fit-content;" class="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-none shadow-sm flex items-center space-x-1">
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                    <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
-                </div>
-            </div>
-        `;
-    }
-
-    container.innerHTML = html; 
-    container.scrollTop = container.scrollHeight;
-    document.getElementById('send-chat-btn').disabled = isChatting; 
-    lucide.createIcons();
-}
 
 // --- API Integration: TTS Audio ---
 
@@ -604,7 +506,6 @@ function stopAllAudio() {
     
     if (activeChatAudio) { activeChatAudio.pause(); activeChatAudio = null; }
     activeChatAudioIndex = -1;
-    renderChat(); // Updates the icons inside the chat
 }
 // --- FULL SCREEN CHAT & VOICE TYPING LOGIC ---
 
