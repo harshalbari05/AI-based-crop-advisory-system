@@ -536,11 +536,12 @@ function populateResults() {
 
 
 function stopAllAudio() {
+    // Instantly stops the native browser voice
     window.speechSynthesis.cancel(); 
-    
     isPlayingAudio = false; 
     activeChatAudioIndex = -1;
     
+    // Update the UI buttons
     if (typeof updateTtsUI !== 'undefined') updateTtsUI();
 }
 // --- FULL SCREEN CHAT & VOICE TYPING LOGIC ---
@@ -597,8 +598,6 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 }
 
 
-
-// 4. Send Message & Render Logic (Replace your old chat functions with these)
 async function sendFullChatMessage() {
     const input = document.getElementById('full-chat-input');
     const text = input.value.trim();
@@ -618,7 +617,9 @@ async function sendFullChatMessage() {
     const cropName = currentAnalysis?.cropName || currentAnalysis?.plantName || "plant";
     const diseaseName = currentAnalysis?.diseaseName || "an unknown condition";
 
-    const systemContext = `You are an AI agricultural assistant advising a ${userRole}. The user previously uploaded an image of a ${cropName} diagnosed with ${diseaseName}. User asks: ${text}. Respond thoroughly in ${selectedLanguage}, keeping their scale (${userRole}) in mind. Use plain formatting easily readable by Text-to-Speech engines.`;
+    // ⚡ FIX: Added "CRITICAL SPEED RULE" to force 1-2 sentence answers!
+    const systemContext = `You are an AI agricultural assistant advising a ${userRole}. Image context: ${cropName} with ${diseaseName}. User asks: ${text}. 
+    CRITICAL SPEED RULE: Respond extremely concisely in 1 to 2 short sentences in ${selectedLanguage}. Keep it brief, conversational, and directly answer the question.`;
 
     try {
         // 3. Send the highly specific prompt to your Gemini API
@@ -638,9 +639,8 @@ async function sendFullChatMessage() {
 
         const reply = data.candidates[0].content.parts[0].text;
         
-        // 4. Save the AI's reply to the chat and speak it out loud for free!
+        // 4. Save the AI's reply to the chat
         chatMessages.push({ role: "model", content: reply });
-        playNativeAudio(reply);
 
     } catch (error) {
         console.error("Chat Error:", error);
@@ -652,21 +652,47 @@ async function sendFullChatMessage() {
     }
 }
 
-function renderFullChat() {
+function renderFullChat(autoScroll = true) {
     const container = document.getElementById('full-chat-container');
     let html = '';
+    
+    // 1. Find the index of YOUR last sent message
+    let lastUserIndex = -1;
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+        if (chatMessages[i].role === 'user') {
+            lastUserIndex = i;
+            break;
+        }
+    }
     
     chatMessages.forEach((msg, index) => {
         if (msg.role === 'system') return; 
         const isUser = msg.role === 'user';
-        
         let formattedContent = isUser ? msg.content : marked.parse(msg.content);
 
+        // 2. Build the "Listen" button for AI replies
+        let audioBtnHtml = '';
+        if (!isUser) {
+            const isPlaying = (activeChatAudioIndex === index);
+            audioBtnHtml = `
+                <div class="mt-2 pt-2 border-t border-gray-200/60 flex justify-end">
+                    <button onclick="playChatAudio(${index})" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition ${isPlaying ? 'bg-amber-100 text-amber-700' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'} border border-transparent">
+                        <i data-lucide="${isPlaying ? 'square' : 'volume-2'}" class="w-3.5 h-3.5 fill-current"></i>
+                        <span>${isPlaying ? 'Stop' : 'Listen'}</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        // 3. Mark YOUR sent message with a special ID
+        let idAttr = (index === lastUserIndex) ? 'id="latest-user-msg"' : '';
+
         html += `
-            <div class="flex ${isUser ? 'justify-end' : 'justify-start'} w-full mb-4">
+            <div ${idAttr} class="flex ${isUser ? 'justify-end' : 'justify-start'} w-full mb-4">
                 <div style="width: fit-content; max-width: 85%; word-break: break-word;" 
                      class="px-4 py-3 shadow-sm text-[15px] ${isUser ? 'bg-emerald-600 text-white rounded-2xl rounded-br-none' : 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-none chat-markdown'}">
                     ${formattedContent}
+                    ${audioBtnHtml}
                 </div>
             </div>
         `;
@@ -685,9 +711,19 @@ function renderFullChat() {
     }
 
     container.innerHTML = html; 
-    container.scrollTop = container.scrollHeight;
     document.getElementById('full-send-btn').disabled = isChatting; 
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // 4. SCROLL LOGIC: Lock the screen to the top of your message!
+    if (autoScroll) {
+        const lastUserMsgEl = document.getElementById('latest-user-msg');
+        if (lastUserMsgEl) {
+            // 'block: start' forces your message to sit exactly at the top of the view
+            lastUserMsgEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            container.scrollTop = container.scrollHeight; 
+        }
+    }
 }
 
 // --- AUDIO PRELOADING LOGIC ---
@@ -775,13 +811,14 @@ function toggleTTS() {
     playNativeAudio(ttsSummaryText);
 }
 
-async function playChatAudio(index) {
+function playChatAudio(index) {
     const msg = chatMessages[index];
     if (!msg) return;
 
-    // Stop if already playing this specific message
-    if (activeChatAudioIndex === index) {
+    // Stop if clicking the same message that is already playing
+    if (activeChatAudioIndex === index && isPlayingAudio) {
         stopAllAudio();
+        renderFullChat(false); // Update UI without jumping the scroll
         return;
     }
 
@@ -790,43 +827,31 @@ async function playChatAudio(index) {
 
     activeChatAudioIndex = index;
 
-    // Clean the text to remove markdown characters so the AI reads it naturally
+    // Clean the markdown text so the AI reads it naturally
     const cleanText = msg.content.replace(/[*#_]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
+    const speech = new SpeechSynthesisUtterance(cleanText);
+    
+    // Use the language from your dropdown
+    const langDropdown = document.getElementById('chat-language');
+    speech.lang = langDropdown ? langDropdown.value : 'en-IN';
+    speech.rate = 0.9;
 
-    const payload = {
-        contents: [{ parts: [{ text: cleanText }] }],
-        generationConfig: {
-            responseModalities: ["AUDIO"],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } }
-        },
-        model: "gemini-2.5-flash-preview-tts"
+    speech.onstart = () => { 
+        isPlayingAudio = true; 
+        renderFullChat(false); // Show the "Stop" button
+    };
+    speech.onend = () => { 
+        isPlayingAudio = false; 
+        activeChatAudioIndex = -1; 
+        renderFullChat(false); // Show the "Listen" button again
+    };
+    speech.onerror = () => { 
+        isPlayingAudio = false; 
+        activeChatAudioIndex = -1; 
+        renderFullChat(false); 
     };
 
-    try {
-        const url = `/api/tts`;
-        const data = await fetchWithRetry(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        const audioPart = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-        if (audioPart && activeChatAudioIndex === index) { // Ensure user hasn't clicked another play button while loading
-            const binaryString = atob(audioPart.data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-            
-            const wavBuffer = pcmToWav(bytes.buffer, 24000); 
-            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-            
-            activeChatAudio = new Audio(URL.createObjectURL(blob));
-            activeChatAudio.onended = () => { activeChatAudioIndex = -1; renderChat(); };
-            activeChatAudio.play();
-        }
-    } catch (err) {
-        console.error("Chat TTS Error:", err);
-        activeChatAudioIndex = -1;
-    }
+    window.speechSynthesis.speak(speech);
 }
 
 function updateTtsUI() {
