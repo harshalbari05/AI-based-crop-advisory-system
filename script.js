@@ -216,43 +216,64 @@ function closeHistory() {
 }
 
 function renderHistory() {
-    const container = document.getElementById('history-list');
+    // Grab both HTML containers (the modal list AND the dashboard list)
+    const historyModalList = document.getElementById('history-list');
+    const dashboardList = document.getElementById('dashboard-recent-list');
     
+    // IF EMPTY: Show empty states for both
     if (diagnosisHistory.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-gray-500 mt-10">
-                <i data-lucide="leaf" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
-                <p>No past diagnoses yet.</p>
-                <p class="text-xs mt-2 opacity-60">Scans will be saved securely on your device.</p>
-            </div>
-        `;
+        if (historyModalList) {
+            historyModalList.innerHTML = `
+                <div class="text-center text-gray-500 mt-10">
+                    <i data-lucide="leaf" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+                    <p>No past diagnoses yet.</p>
+                    <p class="text-xs mt-2 opacity-60">Scans will be saved securely on your device.</p>
+                </div>
+            `;
+        }
+        if (dashboardList) {
+            dashboardList.innerHTML = `<p class="text-sm text-gray-500 text-center py-4 bg-white rounded-xl border border-gray-100">No recent scans.</p>`;
+        }
         if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
-    container.innerHTML = diagnosisHistory.map(item => `
-        <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex space-x-3 items-center">
-            <img src="${item.image}" class="w-16 h-16 rounded-xl object-cover border border-gray-100">
-            <div class="flex-1">
-                <p class="text-xs text-gray-400 mb-1">${item.date}</p>
-                <p class="text-sm font-medium text-gray-800 line-clamp-2">${item.text.substring(0, 75)}...</p>
+    // 1. Render FULL list for the History Modal
+    if (historyModalList) {
+        historyModalList.innerHTML = diagnosisHistory.map(item => `
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex space-x-3 items-center">
+                <img src="${item.image}" class="w-16 h-16 rounded-xl object-cover border border-gray-100 flex-shrink-0">
+                <div class="flex-1">
+                    <p class="text-xs text-gray-400 mb-1">${item.date}</p>
+                    <p class="text-sm font-medium text-gray-800 line-clamp-2">${item.text.substring(0, 75)}...</p>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
+
+    // 2. Render ONLY TOP 3 for the Dashboard (Home Screen)
+    if (dashboardList) {
+        // .slice(0, 3) grabs just the first three items!
+        dashboardList.innerHTML = diagnosisHistory.slice(0, 3).map(item => `
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex space-x-3 items-center">
+                <img src="${item.image}" class="w-12 h-12 rounded-lg object-cover border border-gray-100 flex-shrink-0">
+                <div class="flex-1">
+                    <p class="text-[10px] text-gray-400 mb-0.5">${item.date}</p>
+                    <p class="text-sm font-bold text-gray-800 line-clamp-1">${item.text}</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-300"></i>
+            </div>
+        `).join('');
+    }
     
+    // Redraw icons for the newly injected HTML
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
-
-// 5. Start the database when the script loads
-window.addEventListener('DOMContentLoaded', () => {
-    initDB().then(() => loadHistory());
-});
-
 
 // Initialize history on load
 document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
-    initWeather(); // <-- ADD THIS LINE
+    initWeather(); 
 });
 
 // --- Fetch with Exponential Backoff & Detailed Errors ---
@@ -366,18 +387,26 @@ async function handleFile(file) {
         return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
-    scanPreviewImg.src = previewUrl;
-    
+    // Hide the initial upload icon and show loading states
     scanInitial.classList.add('hidden');
     scanPreviewImg.classList.remove('hidden');
     scanCameraOverlay.classList.remove('hidden');
     scanError.classList.add('hidden');
 
     try {
-        // Resize and compress the image before sending to prevent Payload Too Large errors
+        // Resize and compress the image
         const { base64Data, mimeType } = await compressImage(file);
-        currentImageBase64 = previewUrl; // Keep original URL for UI display
+        
+        // ⚡ FIX: Build a permanent Base64 URL instead of a temporary Blob!
+        const permanentImageString = `data:${mimeType};base64,${base64Data}`;
+        
+        // Save the permanent string to your global variable so it goes to the database
+        currentImageBase64 = permanentImageString; 
+        
+        // Show it on the screen
+        scanPreviewImg.src = currentImageBase64; 
+        
+        // Send the raw data to the AI
         analyzeImage(base64Data, mimeType);
     } catch (err) {
         showScanError("Failed to compress image locally: " + err.message);
@@ -564,38 +593,6 @@ function closeFullScreenChat() {
 // 2. Voice Typing (Speech to Text)
 let isRecording = false;
 let recognition = null;
-
-// Initialize native browser speech recognition
-if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-IN'; // You can change this to 'hi-IN' for Hindi, etc.
-
-    recognition.onstart = () => {
-        isRecording = true;
-        document.getElementById('mic-btn').classList.replace('bg-emerald-50', 'bg-red-100');
-        document.getElementById('mic-btn').classList.replace('text-emerald-600', 'text-red-600');
-        document.getElementById('mic-status').innerText = "Listening...";
-        document.getElementById('mic-icon').setAttribute('data-lucide', 'mic-off');
-        lucide.createIcons();
-    };
-
-    recognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                document.getElementById('full-chat-input').value += event.results[i][0].transcript + ' ';
-            } else {
-                interimTranscript += event.results[i][0].transcript;
-            }
-        }
-    };
-
-    recognition.onerror = (event) => { console.error("Speech error", event.error); toggleVoiceTyping(); };
-    recognition.onend = () => { if(isRecording) toggleVoiceTyping(); };
-}
 
 
 async function sendFullChatMessage() {
