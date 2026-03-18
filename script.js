@@ -639,7 +639,7 @@ async function analyzeImage(base64Data, mimeType) {
         }];
         
         // Automatically stop old audio if restarting analysis
-        stopAllAudio();
+        stopAllAudio(); 
     
         switchTab('results');
         
