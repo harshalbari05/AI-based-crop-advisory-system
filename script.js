@@ -572,7 +572,8 @@ async function analyzeImage(base64Data, mimeType) {
     scanLoading.classList.remove('hidden');
     scanError.classList.add('hidden');
     
-    const selectedLanguage = document.getElementById('chat-language').value;
+    const langSelect = document.getElementById('chat-language');
+    const selectedLanguageName = langSelect.options[langSelect.selectedIndex].text;
     
     // 1. Give the AI context based on the toggle switch!
     const modeContext = userMode === 'farmer' 
@@ -580,12 +581,16 @@ async function analyzeImage(base64Data, mimeType) {
         : "You are advising a home gardener. Focus on houseplants, home gardens, small-scale organic remedies, and ignore large-scale agricultural chemicals.";
     
     const prompt = `
-        You are an expert botanist and agronomist. Analyze this image. 
+        You are an expert botanist and agronomist. Analyze this image of a plant leaf. 
         ${modeContext}
-        Provide a diagnosis including the plant/crop name, disease name (if any), health status, and a confidence score.
-        List symptoms, causes, prevention, organic treatments, chemical treatments (if appropriate), and general care tips.
-        CRITICAL SPEED RULE: Be highly concise. Keep all lists to a maximum of 2 bullet points.
-        IMPORTANT: Translate all text values in your JSON response to ${selectedLanguage}.
+        Provide a detailed diagnosis, including the crop name, disease name (if any), health status, and a confidence score.
+        List symptoms, causes, prevention methods, organic treatments, chemical treatments (if appropriate), and general care tips.
+        Suggest real commercial product names available in Indian agro-stores, including their brand and estimated price in INR.
+        
+        CRITICAL RULE: Translate ALL text values within the JSON object into **${selectedLanguageName}**. 
+        Do not respond in English unless ${selectedLanguageName} is English. 
+        Ensure accurate agricultural terminology is used in ${selectedLanguageName}.
+        The JSON keys MUST remain in English (e.g., "diseaseName", "treatmentOrganic").
     `;
 
     // 2. Updated Schema to include Care Tips
