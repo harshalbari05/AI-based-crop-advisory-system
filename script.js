@@ -745,6 +745,7 @@ let isRecording = false;
 let recognition = null;
 
 
+// --- FULL SCREEN CHAT: High-Speed & Language-Aware ---
 async function sendFullChatMessage() {
     const input = document.getElementById('full-chat-input');
     const text = input.value.trim();
@@ -757,16 +758,28 @@ async function sendFullChatMessage() {
     renderFullChat();
 
     // 2. Build the Smart Context (Language + Farmer/Gardener Mode)
-    const selectedLanguage = document.getElementById('chat-language').value;
+    const selectedLanguageCode = document.getElementById('chat-language').value;
+    
+    // Safety check: Get the full language name from the dropdown (e.g., "Hindi")
+    const langSelect = document.getElementById('chat-language');
+    const selectedLanguageName = langSelect.options[langSelect.selectedIndex].text;
+
     const userRole = userMode === 'farmer' ? 'commercial farmer' : 'home gardener';
     
     // Safely get the plant name in case they haven't scanned anything yet
     const cropName = currentAnalysis?.cropName || currentAnalysis?.plantName || "plant";
     const diseaseName = currentAnalysis?.diseaseName || "an unknown condition";
 
-    // ⚡ FIX: Added "CRITICAL SPEED RULE" to force 1-2 sentence answers!
-    const systemContext = `You are an AI agricultural assistant advising a ${userRole}. Image context: ${cropName} with ${diseaseName}. User asks: ${text}. 
-    CRITICAL SPEED RULE: Respond extremely concisely in 1 to 2 short sentences in ${selectedLanguage}. Keep it brief, conversational, and directly answer the question.`;
+    // ⚡ FIX: Added dynamic, high-speed, LANGUAGE-AWARE context!
+    // We explicitly tell the AI to translate its response into the user's selected language.
+    const systemContext = `
+        You are an AI agricultural assistant advising a ${userRole}. 
+        The image context is: ${cropName} with ${diseaseName}. 
+        User's question: "${text}". 
+        CRITICAL RULE: Respond extremely concisely in 1 to 2 short sentences in **${selectedLanguageName}**.
+        Ensure accurate agricultural terminology is used in **${selectedLanguageName}**.
+        If the question is unrelated to the context, politely say that in **${selectedLanguageName}**.
+    `;
 
     try {
         // 3. Send the highly specific prompt to your Gemini API
